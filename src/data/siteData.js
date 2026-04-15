@@ -43,9 +43,9 @@ export const defaultSiteContent = {
     },
     overview: {
       eyebrow: "What this portfolio shows",
-      title: "A broader technical profile, presented clearly.",
+      title: "I bring infrastructure, security, and product delivery into one hire.",
       body:
-        "The portfolio is built around the idea that teams do not always need a single-lane specialist. Sometimes they need someone who can reason across the network, the attack path, the product interface, and the delivery pressure at the same time."
+        "I built this portfolio to show the range I can bring to a team without diluting technical depth. I can move from network operations to security validation, from web applications to automation, and still keep the work structured, accountable, and clear for the people relying on it."
     },
     highlights: {
       eyebrow: "Services and experience",

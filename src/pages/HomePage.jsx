@@ -33,7 +33,7 @@ export function HomePage() {
   useEffect(() => {
     const revealNodes = Array.from(document.querySelectorAll("[data-reveal]"));
     const storyNodes = Array.from(document.querySelectorAll("[data-story-panel]"));
-    const siteNodes = Array.from(document.querySelectorAll("[data-site-step]"));
+    const siteNodes = Array.from(document.querySelectorAll("[data-site-panel]"));
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (reduceMotion) {
@@ -79,8 +79,8 @@ export function HomePage() {
         });
       },
       {
-        threshold: 0.45,
-        rootMargin: "-16% 0px -42% 0px"
+        threshold: 0.3,
+        rootMargin: "-18% 0px -45% 0px"
       }
     );
 
@@ -124,10 +124,6 @@ export function HomePage() {
   const activePortfolio =
     portfolioSystems.find((portfolio) => portfolio.slug === activePortfolioSlug) ??
     portfolioSystems[0];
-  const activePortfolioIndex = Math.max(
-    portfolioSystems.findIndex((portfolio) => portfolio.slug === activePortfolio.slug),
-    0
-  );
 
   const contactActions = [
     {
@@ -394,41 +390,60 @@ export function HomePage() {
           <p>{sectionCopy.portfolio.body}</p>
         </div>
 
-        <div className="portfolio-showcase">
-          <div className="portfolio-preview-shell">
-            <article className="portfolio-preview">
-              <div className="portfolio-preview__frame">
-                <div className="portfolio-preview__chrome" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
+        <div className="story story--portfolio">
+          <div className="story__visual story__visual--portfolio" data-reveal>
+            {portfolioSystems.map((portfolio, index) => (
+              <article
+                className={`story__panel portfolio-panel ${portfolio.slug === activePortfolio.slug ? "is-active" : ""}`}
+                key={portfolio.slug}
+              >
+                <img src={portfolio.image} alt={portfolio.alt} />
+                <div className="story__panel-copy portfolio-panel__copy">
+                  <div className="portfolio-panel__topline">
+                    <p className="eyebrow">{portfolio.type}</p>
+                    <span className="portfolio-panel__count">
+                      {String(index + 1).padStart(2, "0")} / {String(portfolioSystems.length).padStart(2, "0")}
+                    </span>
+                  </div>
+                  <h3>{portfolio.title}</h3>
+                  <p>{portfolio.summary}</p>
+                  <div className="link-row">
+                    <a
+                      href={portfolio.links[0]?.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {portfolio.links[0]?.label ?? "Open site"}
+                    </a>
+                    <Link to="/projects?category=Portfolio%20Systems">Open the catalog</Link>
+                  </div>
                 </div>
-                <a
-                  className="portfolio-preview__media"
-                  href={activePortfolio.links[0]?.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <img src={activePortfolio.image} alt={activePortfolio.alt} />
-                </a>
-              </div>
+              </article>
+            ))}
+          </div>
 
-              <div className="portfolio-preview__body">
-                <div className="portfolio-preview__topline">
-                  <p className="project-card__category">{activePortfolio.type}</p>
-                  <span className="portfolio-preview__index">
-                    {String(activePortfolioIndex + 1).padStart(2, "0")} / {String(portfolioSystems.length).padStart(2, "0")}
-                  </span>
-                </div>
-                <h3>{activePortfolio.title}</h3>
-                <p>{activePortfolio.summary}</p>
+          <div className="story__cards portfolio-cards">
+            {portfolioSystems.map((portfolio, index) => (
+              <article
+                className={`story-card portfolio-card ${portfolio.slug === activePortfolio.slug ? "is-active" : ""}`}
+                data-reveal
+                data-site-panel
+                data-site-slug={portfolio.slug}
+                key={portfolio.slug}
+                onMouseEnter={() => setActivePortfolioSlug(portfolio.slug)}
+                onFocus={() => setActivePortfolioSlug(portfolio.slug)}
+              >
+                <span className="story-card__index">0{index + 1}</span>
+                <p className="project-card__category">{portfolio.type}</p>
+                <h3>{portfolio.title}</h3>
+                <p>{portfolio.summary}</p>
                 <ul className="bullet-list bullet-list--compact">
-                  {activePortfolio.outcomes.map((item) => (
+                  {portfolio.outcomes.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
                 <div className="tag-list">
-                  {activePortfolio.stack.slice(0, 3).map((item) => (
+                  {portfolio.stack.slice(0, 3).map((item) => (
                     <span className="tag" key={item}>
                       {item}
                     </span>
@@ -436,53 +451,15 @@ export function HomePage() {
                 </div>
                 <div className="link-row">
                   <a
-                    href={activePortfolio.links[0]?.url}
+                    href={portfolio.links[0]?.url}
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {activePortfolio.links[0]?.label ?? "Open site"}
+                    {portfolio.links[0]?.label ?? "Open site"}
                   </a>
                   <Link to="/projects?category=Portfolio%20Systems">Open the catalog</Link>
                 </div>
-              </div>
-            </article>
-          </div>
-
-          <div className="portfolio-steps">
-            {portfolioSystems.map((portfolio, index) => (
-              <a
-                className={`portfolio-step ${portfolio.slug === activePortfolio.slug ? "is-active" : ""}`}
-                data-reveal
-                data-site-step
-                data-site-slug={portfolio.slug}
-                href={portfolio.links[0]?.url}
-                key={portfolio.slug}
-                onMouseEnter={() => setActivePortfolioSlug(portfolio.slug)}
-                onFocus={() => setActivePortfolioSlug(portfolio.slug)}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <div className="portfolio-step__meta">
-                  <span className="portfolio-step__index">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className="portfolio-step__type">{portfolio.type}</span>
-                </div>
-                <div className="portfolio-step__body">
-                  <h3>{portfolio.title}</h3>
-                  <p>{portfolio.summary}</p>
-                  <div className="tag-list">
-                    {portfolio.stack.slice(0, 3).map((item) => (
-                      <span className="tag" key={item}>
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                  <span className="portfolio-step__action">
-                    {portfolio.links[0]?.label ?? "Open site"}
-                  </span>
-                </div>
-              </a>
+              </article>
             ))}
           </div>
         </div>

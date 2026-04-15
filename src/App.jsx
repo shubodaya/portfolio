@@ -91,7 +91,7 @@ function Header() {
       <div className="site-header__inner">
         <Link className="site-brand" to="/">
           <span className="site-brand__mark" aria-hidden="true">
-            <img src="/assets/network-logo.png" alt="" />
+            <img src="/assets/favicon_io/apple-touch-icon.png" alt="" />
           </span>
           <span className="site-brand__copy">
             <strong>{contact.name}</strong>
@@ -145,31 +145,37 @@ function Footer() {
     {
       href: `mailto:${contact.email}`,
       label: "Send email",
+      shortLabel: "Email",
       kind: "email"
     },
     {
       href: `tel:${contact.phone.replace(/\s+/g, "")}`,
       label: "Call phone",
+      shortLabel: "Call",
       kind: "phone"
     },
     {
       href: contact.links.linkedin,
       label: "Open LinkedIn",
+      shortLabel: "LinkedIn",
       kind: "linkedin"
     },
     {
       href: contact.links.github,
       label: "Open GitHub",
+      shortLabel: "GitHub",
       kind: "github"
     },
     {
       href: contact.links.blog,
       label: "Open blog",
+      shortLabel: "Blog",
       kind: "blog"
     },
     {
       href: contact.links.resume,
       label: "Open resume",
+      shortLabel: "Resume",
       kind: "resume"
     }
   ];
@@ -207,10 +213,10 @@ function Footer() {
 
         <div className="site-footer__block">
           <h3>{sectionCopy.footer.reachTitle}</h3>
-          <div className="footer-icon-row" aria-label="Footer contact links">
+          <div className="footer-link-row" aria-label="Footer contact links">
             {reachLinks.map((item) => (
               <a
-                className="footer-icon"
+                className="footer-link"
                 href={item.href}
                 key={item.label}
                 target={item.href.startsWith("http") ? "_blank" : undefined}
@@ -218,7 +224,10 @@ function Footer() {
                 aria-label={item.label}
                 title={item.label}
               >
-                <ContactGlyph kind={item.kind} />
+                <span className="footer-link__icon" aria-hidden="true">
+                  <ContactGlyph kind={item.kind} />
+                </span>
+                <span className="footer-link__label">{item.shortLabel}</span>
               </a>
             ))}
           </div>
