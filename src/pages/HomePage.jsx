@@ -392,19 +392,14 @@ export function HomePage() {
 
         <div className="story story--portfolio">
           <div className="story__visual story__visual--portfolio" data-reveal>
-            {portfolioSystems.map((portfolio, index) => (
+            {portfolioSystems.map((portfolio) => (
               <article
                 className={`story__panel portfolio-panel ${portfolio.slug === activePortfolio.slug ? "is-active" : ""}`}
                 key={portfolio.slug}
               >
                 <img src={portfolio.image} alt={portfolio.alt} />
                 <div className="story__panel-copy portfolio-panel__copy">
-                  <div className="portfolio-panel__topline">
-                    <p className="eyebrow">{portfolio.type}</p>
-                    <span className="portfolio-panel__count">
-                      {String(index + 1).padStart(2, "0")} / {String(portfolioSystems.length).padStart(2, "0")}
-                    </span>
-                  </div>
+                  <p className="eyebrow">{portfolio.type}</p>
                   <h3>{portfolio.title}</h3>
                   <p>{portfolio.summary}</p>
                   <div className="link-row">
@@ -422,10 +417,10 @@ export function HomePage() {
             ))}
           </div>
 
-          <div className="story__cards portfolio-cards">
-            {portfolioSystems.map((portfolio, index) => (
+          <div className="story__cards">
+            {portfolioSystems.map((portfolio) => (
               <article
-                className={`story-card portfolio-card ${portfolio.slug === activePortfolio.slug ? "is-active" : ""}`}
+                className="story-card"
                 data-reveal
                 data-site-panel
                 data-site-slug={portfolio.slug}
@@ -433,8 +428,7 @@ export function HomePage() {
                 onMouseEnter={() => setActivePortfolioSlug(portfolio.slug)}
                 onFocus={() => setActivePortfolioSlug(portfolio.slug)}
               >
-                <span className="story-card__index">0{index + 1}</span>
-                <p className="project-card__category">{portfolio.type}</p>
+                <p className="eyebrow">{portfolio.type}</p>
                 <h3>{portfolio.title}</h3>
                 <p>{portfolio.summary}</p>
                 <ul className="bullet-list bullet-list--compact">
@@ -442,13 +436,6 @@ export function HomePage() {
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
-                <div className="tag-list">
-                  {portfolio.stack.slice(0, 3).map((item) => (
-                    <span className="tag" key={item}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
                 <div className="link-row">
                   <a
                     href={portfolio.links[0]?.url}
