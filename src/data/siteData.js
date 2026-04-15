@@ -206,8 +206,8 @@ export const defaultSiteContent = {
       description:
         "My value is not just building the thing. It is explaining what changed, what matters, what failed, and what to do next in a way that recruiters, engineers, and clients can all follow.",
       metric: "From KB articles and support escalations to role-specific portfolio systems",
-      image: "/assets/projects/site-blog-browser.png",
-      alt: "Technical writing platform with published networking and security posts.",
+      image: "/assets/04_Communication_that_202604152253.png",
+      alt: "Communication-focused visual for delivery, documentation, and stakeholder clarity.",
       outcomes: [
         "Knowledge-base writing and incident documentation",
         "Role-focused portfolio systems for different hiring conversations",

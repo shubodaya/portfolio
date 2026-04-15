@@ -7,6 +7,12 @@ import {
   getMergedSiteContent,
   readStoredSiteContentOverrides
 } from "./data/siteData";
+import {
+  PROJECT_OVERRIDES_STORAGE_KEY,
+  defaultProjects,
+  getMergedProjects,
+  readStoredProjectOverrides
+} from "./data/projectCatalog";
 
 const ADMIN_OWNER_KEY = "portfolio-admin-owner-v1";
 const ADMIN_SESSION_KEY = "portfolio-admin-session-v1";
@@ -20,6 +26,15 @@ const JSON_SECTIONS = [
   { key: "hiringReasons", label: "Why hire me tiles" },
   { key: "blogNotes", label: "Writing notes" },
   { key: "testimonials", label: "Testimonials" }
+];
+
+const ADMIN_SECTIONS = [
+  { id: "admin-publish", label: "Publish" },
+  { id: "admin-brand", label: "Brand and contact" },
+  { id: "admin-copy", label: "Section copy" },
+  { id: "admin-featured", label: "Featured work" },
+  { id: "admin-structured", label: "Structured content" },
+  { id: "admin-json", label: "Current JSON" }
 ];
 
 const readJsonStorage = (key, storage) => {
@@ -59,7 +74,33 @@ const createJsonEditors = (content) =>
     return accumulator;
   }, {});
 
+const createProjectEditors = (projects) =>
+  projects
+    .filter((project) => project.category !== "Portfolio Systems")
+    .map((project) => ({
+      slug: project.slug,
+      title: project.title,
+      category: project.category,
+      featured: Boolean(project.featured)
+    }));
+
+const createProjectOverrides = (projects) =>
+  projects.reduce((accumulator, project) => {
+    const defaultProject = defaultProjects.find((item) => item.slug === project.slug);
+
+    if (!defaultProject || project.featured === defaultProject.featured) {
+      return accumulator;
+    }
+
+    accumulator[project.slug] = {
+      featured: project.featured
+    };
+
+    return accumulator;
+  }, {});
+
 const initialContent = getMergedSiteContent(readStoredSiteContentOverrides());
+const initialProjectContent = getMergedProjects(readStoredProjectOverrides());
 
 const hashPassword = async (value) => {
   const encoded = new TextEncoder().encode(value);
@@ -108,7 +149,11 @@ const sectionCopyFields = [
   ["catalog", "Catalog paragraph", "body"],
   ["catalogCta", "Catalog CTA eyebrow", "eyebrow"],
   ["catalogCta", "Catalog CTA title", "title"],
-  ["catalogCta", "Catalog CTA paragraph", "body"]
+  ["catalogCta", "Catalog CTA paragraph", "body"],
+  ["footer", "Footer eyebrow", "eyebrow"],
+  ["footer", "Footer services title", "servicesTitle"],
+  ["footer", "Footer categories title", "categoriesTitle"],
+  ["footer", "Footer reach title", "reachTitle"]
 ];
 
 export function AdminPortal() {
@@ -137,6 +182,9 @@ export function AdminPortal() {
   });
   const [draft, setDraft] = useState(() => cloneSiteContent(initialContent));
   const [jsonEditors, setJsonEditors] = useState(() => createJsonEditors(initialContent));
+  const [projectEditors, setProjectEditors] = useState(() =>
+    createProjectEditors(initialProjectContent)
+  );
   const [authError, setAuthError] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [contentError, setContentError] = useState("");
@@ -229,10 +277,19 @@ export function AdminPortal() {
       });
 
       nextDraft = getMergedSiteContent(nextDraft);
+      const projectOverrides = createProjectOverrides(projectEditors);
       window.localStorage.setItem(
         SITE_CONTENT_STORAGE_KEY,
         JSON.stringify(nextDraft, null, 2)
       );
+      if (Object.keys(projectOverrides).length) {
+        window.localStorage.setItem(
+          PROJECT_OVERRIDES_STORAGE_KEY,
+          JSON.stringify(projectOverrides, null, 2)
+        );
+      } else {
+        window.localStorage.removeItem(PROJECT_OVERRIDES_STORAGE_KEY);
+      }
       syncDraft(nextDraft);
       setContentMessage(
         "Saved. Open the portfolio in a new tab or refresh the site to load the updated content."
@@ -244,7 +301,9 @@ export function AdminPortal() {
 
   const handleResetDefaults = () => {
     window.localStorage.removeItem(SITE_CONTENT_STORAGE_KEY);
+    window.localStorage.removeItem(PROJECT_OVERRIDES_STORAGE_KEY);
     syncDraft(defaultSiteContent);
+    setProjectEditors(createProjectEditors(defaultProjects));
     setContentError("");
     setContentMessage("Reset to the default portfolio content.");
   };
@@ -366,9 +425,22 @@ export function AdminPortal() {
       ) : null}
 
       {authenticated ? (
-        <form className="admin-workspace admin-workspace--single" onSubmit={handleSave}>
+        <form className="admin-workspace" onSubmit={handleSave}>
+          <aside className="admin-sidebar">
+            <div className="admin-sidebar__panel">
+              <p className="admin-console__eyebrow">Sections</p>
+              <nav className="admin-sidebar__nav" aria-label="Admin sections">
+                {ADMIN_SECTIONS.map((section) => (
+                  <a className="admin-sidebar__link" href={`#${section.id}`} key={section.id}>
+                    {section.label}
+                  </a>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
           <div className="admin-main">
-            <section className="admin-card admin-card--actions admin-card--actions-top">
+            <section className="admin-card admin-card--actions admin-card--actions-top" id="admin-publish">
               <div className="admin-actions">
                 <button className="admin-btn admin-btn--primary" type="submit">
                   Save content
@@ -393,7 +465,7 @@ export function AdminPortal() {
               ) : null}
             </section>
 
-            <section className="admin-card">
+            <section className="admin-card" id="admin-brand">
               <h2>Brand and contact</h2>
               <div className="admin-form admin-form--two-col">
                 <label>
@@ -502,7 +574,7 @@ export function AdminPortal() {
               </div>
             </section>
 
-            <section className="admin-card">
+            <section className="admin-card" id="admin-copy">
               <h2>Section copy</h2>
               <div className="admin-form admin-form--two-col">
                 {sectionCopyFields.map(([group, label, field]) => (
@@ -532,7 +604,37 @@ export function AdminPortal() {
               </div>
             </section>
 
-            <section className="admin-card">
+            <section className="admin-card" id="admin-featured">
+              <h2>Featured work</h2>
+              <p className="admin-muted">
+                Choose which projects appear in the landing-page featured section.
+              </p>
+              <div className="admin-project-grid">
+                {projectEditors.map((project) => (
+                  <label className="admin-project-toggle" key={project.slug}>
+                    <input
+                      type="checkbox"
+                      checked={project.featured}
+                      onChange={(event) =>
+                        setProjectEditors((current) =>
+                          current.map((item) =>
+                            item.slug === project.slug
+                              ? { ...item, featured: event.target.checked }
+                              : item
+                          )
+                        )
+                      }
+                    />
+                    <div className="admin-project-toggle__copy">
+                      <strong>{project.title}</strong>
+                      <span>{project.category}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            <section className="admin-card" id="admin-structured">
               <h2>Structured content</h2>
               <div className="admin-editor-grid">
                 {JSON_SECTIONS.map((section) => (
@@ -553,7 +655,7 @@ export function AdminPortal() {
               </div>
             </section>
 
-            <section className="admin-card">
+            <section className="admin-card" id="admin-json">
               <h2>Current JSON</h2>
               <p className="admin-muted">
                 This is the content snapshot that will be used the next time the portfolio reloads.

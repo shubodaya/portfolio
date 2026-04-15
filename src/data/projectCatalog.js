@@ -1,5 +1,9 @@
 import { portfolioSystems } from "./portfolioSystems";
 
+const PROJECT_OVERRIDES_STORAGE_KEY = "portfolio-project-overrides-v1";
+const isRecord = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
 export const projectCategories = [
   "All",
   "Network Security",
@@ -401,8 +405,8 @@ const coreProjects = [
       "Template-driven generation plus GitHub publishing flow",
       "A strong blend of product design and developer tooling"
     ],
-    image: "/assets/projects/story-it.png",
-    alt: "Portfolio interface on screens with code and dashboard visuals.",
+    image: "/assets/projects/site-folique-browser.png",
+    alt: "Folique landing page with portfolio builder hero and account access panel.",
     featured: true,
     links: [
       {
@@ -596,7 +600,7 @@ const coreProjects = [
     ],
     image: "/assets/projects/character-play-browser.png",
     alt: "Third-person character controller prototype with a character standing in a test arena.",
-    featured: true,
+    featured: false,
     links: [
       {
         label: "GitHub",
@@ -606,4 +610,38 @@ const coreProjects = [
   }
 ];
 
-export const projects = [...coreProjects, ...portfolioSystems];
+export const defaultProjects = [...coreProjects, ...portfolioSystems];
+
+export const getMergedProjects = (overrides) =>
+  defaultProjects.map((project) => {
+    const projectOverride =
+      isRecord(overrides) && isRecord(overrides[project.slug]) ? overrides[project.slug] : {};
+
+    return {
+      ...project,
+      ...projectOverride
+    };
+  });
+
+export const readStoredProjectOverrides = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(PROJECT_OVERRIDES_STORAGE_KEY);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+export const projects = getMergedProjects(readStoredProjectOverrides());
+
+export { PROJECT_OVERRIDES_STORAGE_KEY };
