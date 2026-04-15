@@ -108,7 +108,7 @@ export const defaultSiteContent = {
       "I build and support systems across network engineering, cybersecurity, web products, automation, and technical storytelling so teams can ship, defend, and explain their environments with confidence.",
     links: {
       resume:
-        "https://docs.google.com/document/d/1N6X1tBwe-eXPUuUK0vc0NTwg8Dh3R3O_Y8Vla9vN9t4/edit?usp=sharing",
+        "https://docs.google.com/document/d/1_7zbqMzdl_wmW-mcFGJstg1HRwJrlj0dzo48k6ReFBg/edit?usp=sharing",
       linkedin: "https://www.linkedin.com/in/shubodaya/",
       github: "https://github.com/shubodaya",
       blog: "https://blog.shubodaya.dev/",

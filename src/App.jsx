@@ -91,7 +91,7 @@ function Header() {
       <div className="site-header__inner">
         <Link className="site-brand" to="/">
           <span className="site-brand__mark" aria-hidden="true">
-            <img src="/assets/favicon_io/apple-touch-icon.png" alt="" />
+            <img src="/assets/favicon/apple-touch-icon.png" alt="" />
           </span>
           <span className="site-brand__copy">
             <strong>{contact.name}</strong>
