@@ -1206,6 +1206,12 @@ button {
   transform: translateY(-1px);
 }
 
+.admin-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
 .admin-btn--primary {
   background: linear-gradient(135deg, rgba(82, 242, 180, 0.92), rgba(112, 213, 255, 0.86));
   color: #05100d;

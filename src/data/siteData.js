@@ -1,5 +1,3 @@
-const SITE_CONTENT_STORAGE_KEY = "portfolio-site-content-v1";
-
 const isRecord = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
@@ -381,39 +379,3 @@ export const defaultSiteContent = {
 
 export const getMergedSiteContent = (overrides) =>
   mergeSiteContent(defaultSiteContent, overrides);
-
-export const readStoredSiteContentOverrides = () => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(SITE_CONTENT_STORAGE_KEY);
-
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw);
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-export const siteContent = getMergedSiteContent(readStoredSiteContentOverrides());
-
-export const {
-  sectionCopy,
-  contact,
-  heroStats,
-  keywordMarquee,
-  storyTracks,
-  services,
-  proofPoints,
-  hiringReasons,
-  blogNotes,
-  testimonials
-} = siteContent;
-
-export { SITE_CONTENT_STORAGE_KEY };

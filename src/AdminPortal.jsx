@@ -1,21 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { cloneSiteContent, defaultSiteContent, getMergedSiteContent } from "./data/siteData";
+import { defaultProjects, getMergedProjects } from "./data/projectCatalog";
+import { useSiteContentData } from "./SiteContentContext";
 import {
-  SITE_CONTENT_STORAGE_KEY,
-  cloneSiteContent,
-  defaultSiteContent,
-  getMergedSiteContent,
-  readStoredSiteContentOverrides
-} from "./data/siteData";
-import {
-  PROJECT_OVERRIDES_STORAGE_KEY,
-  defaultProjects,
-  getMergedProjects,
-  readStoredProjectOverrides
-} from "./data/projectCatalog";
-
-const ADMIN_OWNER_KEY = "portfolio-admin-owner-v1";
-const ADMIN_SESSION_KEY = "portfolio-admin-session-v1";
+  getAdminSession,
+  getAdminSiteContent,
+  loginOwner,
+  logoutOwner,
+  registerFirstOwner,
+  updateAdminSiteContent
+} from "./siteApi";
 
 const JSON_SECTIONS = [
   { key: "heroStats", label: "Hero stats" },
@@ -37,36 +32,8 @@ const ADMIN_SECTIONS = [
   { id: "admin-json", label: "Current JSON" }
 ];
 
-const readJsonStorage = (key, storage) => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const raw = storage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const writeJsonStorage = (key, value, storage) => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  storage.setItem(key, JSON.stringify(value));
-};
-
-const readOwner = () => readJsonStorage(ADMIN_OWNER_KEY, window.localStorage);
-
-const hasActiveSession = () => {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === "active";
-};
+const isRecord = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
 
 const createJsonEditors = (content) =>
   JSON_SECTIONS.reduce((accumulator, section) => {
@@ -99,15 +66,20 @@ const createProjectOverrides = (projects) =>
     return accumulator;
   }, {});
 
-const initialContent = getMergedSiteContent(readStoredSiteContentOverrides());
-const initialProjectContent = getMergedProjects(readStoredProjectOverrides());
+const buildAdminContentPayload = (siteContent, projectEditors) => ({
+  siteContent,
+  projectOverrides: createProjectOverrides(projectEditors)
+});
 
-const hashPassword = async (value) => {
-  const encoded = new TextEncoder().encode(value);
-  const digest = await window.crypto.subtle.digest("SHA-256", encoded);
-  return Array.from(new Uint8Array(digest))
-    .map((item) => item.toString(16).padStart(2, "0"))
-    .join("");
+const normalizeAdminContentPayload = (payload) => {
+  const source = isRecord(payload?.content) ? payload.content : isRecord(payload) ? payload : {};
+  const siteContent = getMergedSiteContent(isRecord(source.siteContent) ? source.siteContent : {});
+  const projectOverrides = isRecord(source.projectOverrides) ? source.projectOverrides : {};
+
+  return {
+    siteContent,
+    projectOverrides
+  };
 };
 
 const updateByPath = (source, path, value) => {
@@ -157,19 +129,13 @@ const sectionCopyFields = [
 ];
 
 export function AdminPortal() {
-  const [ownerExists, setOwnerExists] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    return Boolean(readOwner());
-  });
-  const [authenticated, setAuthenticated] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    return hasActiveSession();
+  const { applyServerContent } = useSiteContentData();
+  const [session, setSession] = useState({
+    checked: false,
+    setupRequired: true,
+    authenticated: false,
+    email: "",
+    csrfToken: ""
   });
   const [setupForm, setSetupForm] = useState({
     email: "",
@@ -180,22 +146,99 @@ export function AdminPortal() {
     email: "",
     password: ""
   });
-  const [draft, setDraft] = useState(() => cloneSiteContent(initialContent));
-  const [jsonEditors, setJsonEditors] = useState(() => createJsonEditors(initialContent));
-  const [projectEditors, setProjectEditors] = useState(() =>
-    createProjectEditors(initialProjectContent)
-  );
+  const [draft, setDraft] = useState(() => cloneSiteContent(defaultSiteContent));
+  const [jsonEditors, setJsonEditors] = useState(() => createJsonEditors(defaultSiteContent));
+  const [projectEditors, setProjectEditors] = useState(() => createProjectEditors(defaultProjects));
+  const [authBusy, setAuthBusy] = useState(false);
+  const [contentBusy, setContentBusy] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [contentError, setContentError] = useState("");
   const [contentMessage, setContentMessage] = useState("");
-  const currentJsonPreview = useMemo(() => JSON.stringify(draft, null, 2), [draft]);
+  const ownerExists = !session.setupRequired;
+  const authenticated = session.authenticated;
+  const currentJsonPreview = useMemo(
+    () => JSON.stringify(buildAdminContentPayload(draft, projectEditors), null, 2),
+    [draft, projectEditors]
+  );
 
   const syncDraft = (nextContent) => {
     const cloned = cloneSiteContent(nextContent);
     setDraft(cloned);
     setJsonEditors(createJsonEditors(cloned));
   };
+
+  const applySavedContent = (payload) => {
+    const normalized = normalizeAdminContentPayload(payload);
+    const mergedProjects = getMergedProjects(normalized.projectOverrides);
+    const editors = createProjectEditors(mergedProjects);
+    syncDraft(normalized.siteContent);
+    setProjectEditors(editors);
+    applyServerContent({
+      configured: Boolean(payload?.configured),
+      updatedAt: typeof payload?.updatedAt === "string" ? payload.updatedAt : "",
+      content: buildAdminContentPayload(normalized.siteContent, editors)
+    });
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      setAuthBusy(true);
+      setContentBusy(true);
+      setAuthError("");
+
+      try {
+        const sessionPayload = await getAdminSession();
+
+        if (cancelled) {
+          return;
+        }
+
+        setSession({
+          checked: true,
+          setupRequired: Boolean(sessionPayload?.setupRequired),
+          authenticated: Boolean(sessionPayload?.authenticated),
+          email: typeof sessionPayload?.email === "string" ? sessionPayload.email : "",
+          csrfToken: typeof sessionPayload?.csrfToken === "string" ? sessionPayload.csrfToken : ""
+        });
+
+        if (sessionPayload?.authenticated) {
+          const contentPayload = await getAdminSiteContent();
+
+          if (cancelled) {
+            return;
+          }
+
+          applySavedContent(contentPayload);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSession((current) => ({
+            ...current,
+            checked: true
+          }));
+          setAuthError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load the shared admin session."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthBusy(false);
+          setContentBusy(false);
+        }
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSetup = async (event) => {
     event.preventDefault();
@@ -212,58 +255,115 @@ export function AdminPortal() {
       return;
     }
 
-    const owner = {
-      email: setupForm.email.trim().toLowerCase(),
-      passwordHash: await hashPassword(setupForm.password)
-    };
+    setAuthBusy(true);
 
-    writeJsonStorage(ADMIN_OWNER_KEY, owner, window.localStorage);
-    window.sessionStorage.setItem(ADMIN_SESSION_KEY, "active");
-    setOwnerExists(true);
-    setAuthenticated(true);
-    setAuthMessage("Owner profile created.");
-    setSetupForm({
-      email: "",
-      password: "",
-      confirmPassword: ""
-    });
+    try {
+      const response = await registerFirstOwner({
+        email: setupForm.email,
+        password: setupForm.password,
+        confirmPassword: setupForm.confirmPassword
+      });
+
+      setSession({
+        checked: true,
+        setupRequired: false,
+        authenticated: true,
+        email: typeof response?.email === "string" ? response.email : setupForm.email.trim(),
+        csrfToken: typeof response?.csrfToken === "string" ? response.csrfToken : ""
+      });
+      applySavedContent({});
+      setAuthMessage("Owner account created. This admin is now shared across browsers and devices.");
+      setSetupForm({
+        email: "",
+        password: "",
+        confirmPassword: ""
+      });
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to create the owner account.");
+    } finally {
+      setAuthBusy(false);
+    }
   };
 
   const handleLogin = async (event) => {
     event.preventDefault();
     setAuthError("");
     setAuthMessage("");
-    const owner = readOwner();
 
-    if (!owner) {
-      setAuthError("Owner setup has not been created yet.");
+    setAuthBusy(true);
+    setContentBusy(true);
+
+    try {
+      const response = await loginOwner({
+        email: loginForm.email,
+        password: loginForm.password
+      });
+
+      setSession({
+        checked: true,
+        setupRequired: false,
+        authenticated: true,
+        email: typeof response?.email === "string" ? response.email : loginForm.email.trim(),
+        csrfToken: typeof response?.csrfToken === "string" ? response.csrfToken : ""
+      });
+
+      const contentPayload = await getAdminSiteContent();
+      applySavedContent(contentPayload);
+      setAuthMessage("Signed in.");
+      setLoginForm({
+        email: "",
+        password: ""
+      });
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to sign in.");
+    } finally {
+      setAuthBusy(false);
+      setContentBusy(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setAuthBusy(true);
+    setAuthError("");
+
+    try {
+      await logoutOwner(session.csrfToken);
+      setSession((current) => ({
+        ...current,
+        authenticated: false,
+        csrfToken: "",
+        email: "",
+        checked: true
+      }));
+      setAuthMessage("Signed out.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to sign out.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleReloadSaved = async () => {
+    if (!authenticated) {
       return;
     }
 
-    const incomingEmail = loginForm.email.trim().toLowerCase();
-    const incomingHash = await hashPassword(loginForm.password);
+    setContentBusy(true);
+    setContentError("");
+    setContentMessage("");
 
-    if (incomingEmail !== owner.email || incomingHash !== owner.passwordHash) {
-      setAuthError("Invalid owner credentials.");
-      return;
+    try {
+      const payload = await getAdminSiteContent();
+      applySavedContent(payload);
+      setContentMessage("Reloaded the latest saved content from the shared admin backend.");
+    } catch (error) {
+      setContentError(error instanceof Error ? error.message : "Failed to reload saved content.");
+    } finally {
+      setContentBusy(false);
     }
-
-    window.sessionStorage.setItem(ADMIN_SESSION_KEY, "active");
-    setAuthenticated(true);
-    setAuthMessage("Signed in.");
-    setLoginForm({
-      email: "",
-      password: ""
-    });
   };
 
-  const handleLogout = () => {
-    window.sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    setAuthenticated(false);
-    setAuthMessage("Signed out.");
-  };
-
-  const handleSave = (event) => {
+  const handleSave = async (event) => {
     event.preventDefault();
     setContentError("");
     setContentMessage("");
@@ -277,35 +377,32 @@ export function AdminPortal() {
       });
 
       nextDraft = getMergedSiteContent(nextDraft);
-      const projectOverrides = createProjectOverrides(projectEditors);
-      window.localStorage.setItem(
-        SITE_CONTENT_STORAGE_KEY,
-        JSON.stringify(nextDraft, null, 2)
-      );
-      if (Object.keys(projectOverrides).length) {
-        window.localStorage.setItem(
-          PROJECT_OVERRIDES_STORAGE_KEY,
-          JSON.stringify(projectOverrides, null, 2)
-        );
-      } else {
-        window.localStorage.removeItem(PROJECT_OVERRIDES_STORAGE_KEY);
+      if (!session.csrfToken) {
+        setContentError("Your admin session is missing a CSRF token. Please log in again.");
+        return;
       }
-      syncDraft(nextDraft);
-      setContentMessage(
-        "Saved. Open the portfolio in a new tab or refresh the site to load the updated content."
-      );
+
+      setContentBusy(true);
+
+      const response = await updateAdminSiteContent({
+        content: buildAdminContentPayload(nextDraft, projectEditors),
+        csrfToken: session.csrfToken
+      });
+
+      applySavedContent(response);
+      setContentMessage("Saved to the shared admin backend.");
     } catch (error) {
       setContentError(error instanceof Error ? error.message : "Failed to save content.");
+    } finally {
+      setContentBusy(false);
     }
   };
 
   const handleResetDefaults = () => {
-    window.localStorage.removeItem(SITE_CONTENT_STORAGE_KEY);
-    window.localStorage.removeItem(PROJECT_OVERRIDES_STORAGE_KEY);
     syncDraft(defaultSiteContent);
     setProjectEditors(createProjectEditors(defaultProjects));
     setContentError("");
-    setContentMessage("Reset to the default portfolio content.");
+    setContentMessage("Editor reset to the default portfolio content. Save to publish it.");
   };
 
   const updateSectionCopy = (group, field, value) => {
@@ -328,18 +425,32 @@ export function AdminPortal() {
             Open site
           </Link>
           {authenticated ? (
-            <button className="admin-btn admin-btn--danger" type="button" onClick={handleLogout}>
+            <button
+              className="admin-btn admin-btn--danger"
+              type="button"
+              onClick={handleLogout}
+              disabled={authBusy}
+            >
               Log out
             </button>
           ) : null}
         </div>
       </header>
 
-      {!ownerExists ? (
+      {!session.checked ? (
+        <div className="admin-card admin-card--auth">
+          <h2>Loading admin</h2>
+          <p className="admin-muted">
+            Checking the shared owner account and loading the current saved content.
+          </p>
+        </div>
+      ) : null}
+
+      {session.checked && !ownerExists ? (
         <div className="admin-card admin-card--auth">
           <h2>Create owner login</h2>
           <p className="admin-muted">
-            This first pass stores the admin login and saved content in this browser for this site.
+            This creates the single shared owner account for the live portfolio backend.
           </p>
           <form className="admin-form" onSubmit={handleSetup}>
             <label>
@@ -375,8 +486,8 @@ export function AdminPortal() {
                 }
               />
             </label>
-            <button className="admin-btn admin-btn--primary" type="submit">
-              Create owner
+            <button className="admin-btn admin-btn--primary" type="submit" disabled={authBusy}>
+              {authBusy ? "Creating..." : "Create owner"}
             </button>
           </form>
           {authError || authMessage ? (
@@ -387,10 +498,12 @@ export function AdminPortal() {
         </div>
       ) : null}
 
-      {ownerExists && !authenticated ? (
+      {session.checked && ownerExists && !authenticated ? (
         <div className="admin-card admin-card--auth">
           <h2>Owner login</h2>
-          <p className="admin-muted">Use the owner credentials to edit the portfolio copy.</p>
+          <p className="admin-muted">
+            Use the shared owner account to edit and publish portfolio content from any browser.
+          </p>
           <form className="admin-form" onSubmit={handleLogin}>
             <label>
               Email
@@ -412,8 +525,8 @@ export function AdminPortal() {
                 }
               />
             </label>
-            <button className="admin-btn admin-btn--primary" type="submit">
-              Sign in
+            <button className="admin-btn admin-btn--primary" type="submit" disabled={authBusy}>
+              {authBusy ? "Signing in..." : "Sign in"}
             </button>
           </form>
           {authError || authMessage ? (
@@ -442,19 +555,28 @@ export function AdminPortal() {
           <div className="admin-main">
             <section className="admin-card admin-card--actions admin-card--actions-top" id="admin-publish">
               <div className="admin-actions">
-                <button className="admin-btn admin-btn--primary" type="submit">
-                  Save content
+                <button className="admin-btn admin-btn--primary" type="submit" disabled={contentBusy}>
+                  {contentBusy ? "Saving..." : "Save content"}
+                </button>
+                <button
+                  className="admin-btn admin-btn--ghost"
+                  type="button"
+                  onClick={handleReloadSaved}
+                  disabled={contentBusy}
+                >
+                  Reload saved
                 </button>
                 <button
                   className="admin-btn admin-btn--ghost"
                   type="button"
                   onClick={handleResetDefaults}
+                  disabled={contentBusy}
                 >
                   Reset to defaults
                 </button>
               </div>
               <p className="admin-muted">
-                The editor updates site copy, contact details, story sections, and the supporting text collections.
+                The editor writes to the shared backend, so the saved content is the same across devices and browsers.
               </p>
               {contentError || contentMessage ? (
                 <div

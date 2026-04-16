@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { contact, sectionCopy } from "../data/siteData";
-import { projectCategories, projects } from "../data/projectCatalog";
+import { useSiteContentData } from "../SiteContentContext";
 
 export function ProjectsPage() {
+  const { siteContent, projectCategories, projects } = useSiteContentData();
+  const { contact, sectionCopy } = siteContent;
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCategory = searchParams.get("category");
   const [activeCategory, setActiveCategory] = useState(

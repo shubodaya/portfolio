@@ -11,8 +11,7 @@ import {
 import { HomePage } from "./pages/HomePage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { AdminPortal } from "./AdminPortal";
-import { contact, sectionCopy, services } from "./data/siteData";
-import { projectCategories } from "./data/projectCatalog";
+import { useSiteContentData, SiteContentProvider } from "./SiteContentContext";
 import { ContactGlyph } from "./components/ContactGlyph";
 
 function ScrollManager() {
@@ -57,6 +56,8 @@ function SectionLink({ sectionId, label, onClick }) {
 
 function Header() {
   const location = useLocation();
+  const { siteContent } = useSiteContentData();
+  const { contact } = siteContent;
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -141,6 +142,8 @@ function Header() {
 }
 
 function Footer() {
+  const { siteContent, projectCategories } = useSiteContentData();
+  const { contact, sectionCopy, services } = siteContent;
   const reachLinks = [
     {
       href: `mailto:${contact.email}`,
@@ -274,9 +277,11 @@ function AppShell() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ScrollManager />
-      <AppShell />
-    </BrowserRouter>
+    <SiteContentProvider>
+      <BrowserRouter>
+        <ScrollManager />
+        <AppShell />
+      </BrowserRouter>
+    </SiteContentProvider>
   );
 }

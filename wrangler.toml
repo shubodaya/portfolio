@@ -1,0 +1,9 @@
+name = "portfolio"
+compatibility_date = "2026-04-16"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "portfolio-db"
+database_id = "516586b5-bc51-4f3b-8b55-a7bbfbea7fa3"
+migrations_dir = "migrations"

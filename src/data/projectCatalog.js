@@ -1,6 +1,5 @@
 import { portfolioSystems } from "./portfolioSystems";
 
-const PROJECT_OVERRIDES_STORAGE_KEY = "portfolio-project-overrides-v1";
 const isRecord = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
@@ -251,7 +250,7 @@ const coreProjects = [
     links: [
       {
         label: "Live preview",
-        url: "https://shubodaya.github.io/AI-friend/"
+        url: "https://aifriendbot.pages.dev/"
       }
     ]
   },
@@ -307,7 +306,7 @@ const coreProjects = [
     links: [
       {
         label: "Live site",
-        url: "https://ledgeraq.shubodaya.dev/"
+        url: "https://ledgeraq.pages.dev"
       }
     ]
   },
@@ -623,25 +622,4 @@ export const getMergedProjects = (overrides) =>
     };
   });
 
-export const readStoredProjectOverrides = () => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(PROJECT_OVERRIDES_STORAGE_KEY);
-
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw);
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-export const projects = getMergedProjects(readStoredProjectOverrides());
-
-export { PROJECT_OVERRIDES_STORAGE_KEY };
+export const projects = defaultProjects;

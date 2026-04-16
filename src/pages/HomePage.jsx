@@ -1,34 +1,56 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  blogNotes,
-  contact,
-  heroStats,
-  hiringReasons,
-  keywordMarquee,
-  proofPoints,
-  sectionCopy,
-  services,
-  storyTracks,
-  testimonials
-} from "../data/siteData";
+import { useSiteContentData } from "../SiteContentContext";
 import { ContactGlyph } from "../components/ContactGlyph";
-import { projects } from "../data/projectCatalog";
-import { portfolioSystems } from "../data/portfolioSystems";
 
 export function HomePage() {
+  const { siteContent, projects } = useSiteContentData();
+  const {
+    blogNotes,
+    contact,
+    heroStats,
+    hiringReasons,
+    keywordMarquee,
+    proofPoints,
+    sectionCopy,
+    services,
+    storyTracks,
+    testimonials
+  } = siteContent;
+  const portfolioSystems = useMemo(
+    () => projects.filter((project) => project.category === "Portfolio Systems"),
+    [projects]
+  );
   const featuredProjects = projects.filter(
     (project) => project.featured && project.category !== "Portfolio Systems"
   );
-  const featuredCategories = [
-    "All",
-    ...new Set(featuredProjects.map((project) => project.category))
-  ];
-  const [activeTrack, setActiveTrack] = useState(storyTracks[0].id);
+  const featuredCategories = useMemo(
+    () => ["All", ...new Set(featuredProjects.map((project) => project.category))],
+    [featuredProjects]
+  );
+  const [activeTrack, setActiveTrack] = useState(storyTracks[0]?.id ?? "");
   const [activeCategory, setActiveCategory] = useState("All");
   const [activePortfolioSlug, setActivePortfolioSlug] = useState(
     portfolioSystems[0]?.slug ?? ""
   );
+
+  useEffect(() => {
+    if (!storyTracks.some((track) => track.id === activeTrack)) {
+      setActiveTrack(storyTracks[0]?.id ?? "");
+    }
+  }, [activeTrack, storyTracks]);
+
+  useEffect(() => {
+    if (!featuredCategories.includes(activeCategory)) {
+      setActiveCategory("All");
+    }
+  }, [activeCategory, featuredCategories]);
+
+  useEffect(() => {
+    if (!portfolioSystems.some((portfolio) => portfolio.slug === activePortfolioSlug)) {
+      setActivePortfolioSlug(portfolioSystems[0]?.slug ?? "");
+    }
+  }, [activePortfolioSlug, portfolioSystems]);
 
   useEffect(() => {
     const revealNodes = Array.from(document.querySelectorAll("[data-reveal]"));
@@ -100,7 +122,7 @@ export function HomePage() {
       storyObserver.disconnect();
       siteObserver.disconnect();
     };
-  }, [activeCategory]);
+  }, [activeCategory, storyTracks, portfolioSystems]);
 
   const visibleProjects = useMemo(() => {
     if (activeCategory === "All") {
