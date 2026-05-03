@@ -1,4 +1,6 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const PUBLIC_CONTACT_EMAIL = "contact@shubodaya.dev";
+const LEGACY_CONTACT_EMAIL = ["hns", "hub", "odaya"].join("") + "@gmail.com";
 
 export class ApiError extends Error {
   constructor(message, status, code = "", details = null) {
@@ -18,6 +20,26 @@ const safeJsonParse = (value) => {
   } catch {
     return null;
   }
+};
+
+const sanitizeLegacyContactEmail = (value) => {
+  if (typeof value === "string") {
+    return value
+      .split(`mailto:${LEGACY_CONTACT_EMAIL}`)
+      .join(`mailto:${PUBLIC_CONTACT_EMAIL}`)
+      .split(LEGACY_CONTACT_EMAIL)
+      .join(PUBLIC_CONTACT_EMAIL);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeLegacyContactEmail(item));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeLegacyContactEmail(item)]));
+  }
+
+  return value;
 };
 
 const requestJson = async (path, options = {}) => {
@@ -42,7 +64,7 @@ const requestJson = async (path, options = {}) => {
     throw new ApiError(message, response.status, data?.error?.code || "", data?.error?.details || null);
   }
 
-  return data;
+  return sanitizeLegacyContactEmail(data);
 };
 
 export const fetchPublicSiteContent = async () => requestJson("/api/site-content");

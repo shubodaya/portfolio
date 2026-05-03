@@ -13,6 +13,8 @@ const CSRF_COOKIE_FLAGS = "Path=/; Secure; SameSite=Strict";
 const HTML_CONTENT_SECURITY_POLICY =
   "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; " +
   "script-src 'self'; connect-src 'self'; img-src 'self' data: https:; media-src 'self' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:";
+const PUBLIC_CONTACT_EMAIL = "contact@shubodaya.dev";
+const LEGACY_CONTACT_EMAIL = ["hns", "hub", "odaya"].join("") + "@gmail.com";
 
 const textEncoder = new TextEncoder();
 
@@ -312,7 +314,7 @@ async function handleUpdateAdminContent(request, env) {
     return body.errorResponse;
   }
 
-  const nextContent = body.content ?? body;
+  const nextContent = sanitizeSiteContent(body.content ?? body);
   if (!nextContent || typeof nextContent !== "object" || Array.isArray(nextContent)) {
     return jsonError(400, "invalid_body", "Content must be a JSON object.");
   }
@@ -537,11 +539,49 @@ async function getSiteContent(db) {
     content = {};
   }
 
+  const sanitizedContent = sanitizeSiteContent(content);
+  let updatedAt = String(row.updated_at || "");
+
+  if (JSON.stringify(sanitizedContent) !== JSON.stringify(content)) {
+    updatedAt = new Date().toISOString();
+    await db
+      .prepare(
+        `
+          UPDATE site_content
+          SET content_json = ?1,
+              updated_at = ?2
+          WHERE content_key = 'portfolio'
+        `
+      )
+      .bind(JSON.stringify(sanitizedContent), updatedAt)
+      .run();
+  }
+
   return {
     configured: true,
-    content,
-    updatedAt: String(row.updated_at || "")
+    content: sanitizedContent,
+    updatedAt
   };
+}
+
+function sanitizeSiteContent(value) {
+  if (typeof value === "string") {
+    return value
+      .split(`mailto:${LEGACY_CONTACT_EMAIL}`)
+      .join(`mailto:${PUBLIC_CONTACT_EMAIL}`)
+      .split(LEGACY_CONTACT_EMAIL)
+      .join(PUBLIC_CONTACT_EMAIL);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeSiteContent(item));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeSiteContent(item)]));
+  }
+
+  return value;
 }
 
 function buildLoginLockKey(request) {
