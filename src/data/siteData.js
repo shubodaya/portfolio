@@ -100,7 +100,7 @@ export const defaultSiteContent = {
     subtitle: "Network engineering, cybersecurity, software products, and automation",
     location: "Plymouth, England",
     availability: "Open to roles, consulting, and project collaborations",
-    email: "hnshubodaya@gmail.com",
+    email: "contact@shubodaya.dev",
     phone: "+44 7436301739",
     summary:
       "I build and support systems across network engineering, cybersecurity, web products, automation, and technical storytelling so teams can ship, defend, and explain their environments with confidence.",
