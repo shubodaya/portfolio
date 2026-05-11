@@ -18,7 +18,7 @@ const JSON_SECTIONS = [
   { key: "storyTracks", label: "Story tracks" },
   { key: "services", label: "Services" },
   { key: "proofPoints", label: "Experience tiles" },
-  { key: "hiringReasons", label: "Why hire me tiles" },
+  { key: "hiringReasons", label: "Role fit tiles" },
   { key: "blogNotes", label: "Writing notes" },
   { key: "testimonials", label: "Testimonials" }
 ];

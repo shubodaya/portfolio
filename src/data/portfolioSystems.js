@@ -1,22 +1,22 @@
 export const portfolioSystems = [
   {
     slug: "portfolio-network",
-    title: "Network Professional Portfolio",
+    title: "Network Operations Profile",
     year: "2026",
     category: "Portfolio Systems",
-    type: "Role-specific portfolio site",
+    type: "Network support evidence",
     summary:
-      "A dedicated portfolio focused on network engineering, NOC thinking, routing, switching, and live operational support.",
+      "A dedicated page focused on network engineering, NOC thinking, routing, switching, and live operational support.",
     proof:
       "Shows how the same body of work can be framed specifically for network roles without losing technical credibility.",
-    stack: ["React", "Vite", "Operations storytelling"],
+    stack: ["Network operations", "Support evidence", "Troubleshooting notes"],
     outcomes: [
       "Live metrics and incident-style framing",
       "Projects centered on labs, troubleshooting, and network design",
-      "Built for recruiters and engineering managers hiring into network roles"
+      "Built around the evidence expected in network support and network security roles"
     ],
     image: "/assets/projects/site-network-browser.png",
-    alt: "Network portfolio homepage with operations feed and infrastructure hero.",
+    alt: "Network operations page with operations feed and infrastructure hero.",
     featured: false,
     links: [
       {
@@ -27,22 +27,22 @@ export const portfolioSystems = [
   },
   {
     slug: "portfolio-security",
-    title: "Cybersecurity Professional Portfolio",
+    title: "Defensive Security Profile",
     year: "2026",
     category: "Portfolio Systems",
-    type: "Role-specific portfolio site",
+    type: "Security operations evidence",
     summary:
-      "A security-first portfolio that brings together incident response, monitoring, certifications, and defensive labs.",
+      "A security-first page that brings together incident response, monitoring, certifications, and defensive labs.",
     proof:
       "Frames support, SOC thinking, and security validation as one security hiring narrative.",
-    stack: ["React", "Security content", "Visual storytelling"],
+    stack: ["Defensive security", "Monitoring", "Incident response"],
     outcomes: [
-      "Hero section tailored to security hiring",
+      "Hero section tailored to defensive security roles",
       "Security-focused projects, certifications, and recommendations",
-      "A cleaner signal for recruiters looking specifically at cyber roles"
+      "A cleaner signal for SOC, network security, and infrastructure security roles"
     ],
     image: "/assets/projects/site-security-browser.png",
-    alt: "Cybersecurity portfolio homepage with graph background and security callout.",
+    alt: "Cybersecurity profile page with graph background and security callout.",
     featured: false,
     links: [
       {
@@ -79,22 +79,22 @@ export const portfolioSystems = [
   },
   {
     slug: "portfolio-it",
-    title: "IT Professional Portfolio",
+    title: "IT Network Support Profile",
     year: "2026",
     category: "Portfolio Systems",
-    type: "Role-specific portfolio site",
+    type: "IT support evidence",
     summary:
-      "A broader IT support and systems version of the portfolio built around service delivery, identity, tooling, and troubleshooting.",
+      "A broader IT support and systems page built around service delivery, identity, tooling, and troubleshooting.",
     proof:
-      "Useful when the hiring conversation needs more emphasis on end-user support, ITSM thinking, and business-facing operations.",
-    stack: ["React", "Responsive design", "Service framing"],
+      "Useful when the role needs more emphasis on end-user support, ITSM thinking, and business-facing operations.",
+    stack: ["IT support", "Service operations", "Troubleshooting"],
     outcomes: [
       "Experience translated into service-oriented language",
-      "Projects tied to IT operations and productivity outcomes",
+      "Projects tied to IT operations and service outcomes",
       "Built for IT support, platform, and systems-adjacent roles"
     ],
     image: "/assets/projects/site-it-browser.png",
-    alt: "IT portfolio homepage with purple interface and desktop workstation visual.",
+    alt: "IT support profile page with interface and desktop workstation visual.",
     featured: false,
     links: [
       {
@@ -105,19 +105,19 @@ export const portfolioSystems = [
   },
   {
     slug: "portfolio-blog",
-    title: "Portfolio Blog Platform",
+    title: "Network Security Notes",
     year: "2026",
     category: "Portfolio Systems",
-    type: "Publishing and writing platform",
+    type: "Technical writing and lab notes",
     summary:
-      "A separate blog platform for technical notes, lab write-ups, and longer-form explanations across networking, cybersecurity, and automation.",
+      "Technical notes, lab write-ups, and longer-form explanations across networking, cybersecurity, and operations automation.",
     proof:
       "Turns project work into readable evidence and shows how the reasoning behind the work holds up when written out clearly.",
-    stack: ["React", "Markdown content", "Publishing workflow"],
+    stack: ["Technical notes", "Lab write-ups", "Support documentation"],
     outcomes: [
       "Blog-driven writing that adds technical depth",
       "Write-ups for Net-Kit, intrusion detection, and lab workflows",
-      "A stronger layer of trust for hiring and consulting conversations"
+      "A stronger evidence layer for network security and IT support roles"
     ],
     image: "/assets/projects/site-blog-browser.png",
     alt: "Technical blog homepage with published network and security articles.",

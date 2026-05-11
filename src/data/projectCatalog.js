@@ -22,16 +22,16 @@ const coreProjects = [
     title: "Netravax",
     year: "2026",
     category: "Network Security",
-    type: "Browser-first network and security workspace",
+    type: "Network operations utility workspace",
     summary:
-      "A network and security workspace that combines guided workflows, exports, speech tools, and optional desktop packaging in one product.",
+      "A network and security support workspace for guided diagnostics, packet-capture notes, log analysis, exports, and operator-friendly troubleshooting.",
     proof:
-      "This is the strongest example of blending security tooling, product design, and practical operator workflows.",
-    stack: ["React", "TypeScript", "Tauri", "Firebase", "Security workflows"],
+      "Shows how automation can support network and security operations without becoming the centre of the role.",
+    stack: ["Diagnostics workflows", "Packet capture", "Log analysis", "Exportable notes", "Security workflows"],
     outcomes: [
       "Guided diagnostics, packet capture, and log analysis in one interface",
       "Web-friendly preview with an optional desktop path for deeper local features",
-      "A clear product layer on top of blue-team and network experience"
+      "A practical support layer on top of blue-team and network experience"
     ],
     image: "/assets/projects/netravax.png",
     alt: "Netravax login screen with a green network mesh background.",
@@ -60,7 +60,7 @@ const coreProjects = [
     summary:
       "A combined Cisco and server lab for routing, switching, DNS, DHCP, Active Directory, VPN validation, and controlled troubleshooting.",
     proof:
-      "This is where the network and platform fundamentals are visible without product gloss hiding the mechanics.",
+      "This is where the network and platform fundamentals are visible through practical topology, service, and fault-isolation work.",
     stack: ["Cisco", "EVE-NG", "Windows Server", "Linux", "Active Directory"],
     outcomes: [
       "Built repeatable lab scenarios for connectivity and service validation",
@@ -133,7 +133,7 @@ const coreProjects = [
     summary:
       "A lab that tests common web attack paths against DVWA and compares exploitability before and after WAF tuning.",
     proof:
-      "Useful because it goes past payload screenshots and into logging quality, residual risk, and what must be fixed in code.",
+      "Useful because it goes past payload screenshots and into logging quality, residual risk, and clear remediation ownership.",
     stack: ["DVWA", "Burp Suite", "OWASP Top 10", "WAF tuning"],
     outcomes: [
       "Validated injection and misconfiguration scenarios manually",
@@ -157,9 +157,9 @@ const coreProjects = [
     category: "Research and Systems",
     type: "Academic and architecture research",
     summary:
-      "Research on in-vehicle network security using ISO 21434 TARA with a proposed software-defined firewall model.",
+      "Research on in-vehicle network security using ISO 21434 TARA with a proposed policy-driven firewall model.",
     proof:
-      "Shows that the portfolio can move from incident and lab work into structured risk analysis and systems thinking.",
+      "Shows structured risk analysis, threat modeling, segmentation thinking, and security architecture reasoning.",
     stack: ["ISO 21434", "TARA", "Threat modeling", "Security architecture"],
     outcomes: [
       "Mapped threats, assets, and trust boundaries in an automotive context",
@@ -168,7 +168,7 @@ const coreProjects = [
     ],
     image: "/assets/projects/automotive-topology.webp",
     alt: "Abstract network topology with a globe and connected systems.",
-    featured: false,
+    featured: true,
     links: [
       {
         label: "GitHub",

@@ -3,6 +3,19 @@ import { Link } from "react-router-dom";
 import { useSiteContentData } from "../SiteContentContext";
 import { ContactGlyph } from "../components/ContactGlyph";
 
+const homepageProjectCategories = new Set([
+  "Network Security",
+  "Pentesting",
+  "Research and Systems"
+]);
+
+const homepagePortfolioSlugs = new Set([
+  "portfolio-network",
+  "portfolio-security",
+  "portfolio-it",
+  "portfolio-blog"
+]);
+
 export function HomePage() {
   const { siteContent, projects } = useSiteContentData();
   const {
@@ -18,11 +31,18 @@ export function HomePage() {
     testimonials
   } = siteContent;
   const portfolioSystems = useMemo(
-    () => projects.filter((project) => project.category === "Portfolio Systems"),
+    () =>
+      projects.filter(
+        (project) =>
+          project.category === "Portfolio Systems" && homepagePortfolioSlugs.has(project.slug)
+      ),
     [projects]
   );
   const featuredProjects = projects.filter(
-    (project) => project.featured && project.category !== "Portfolio Systems"
+    (project) =>
+      project.featured &&
+      project.category !== "Portfolio Systems" &&
+      homepageProjectCategories.has(project.category)
   );
   const featuredCategories = useMemo(
     () => ["All", ...new Set(featuredProjects.map((project) => project.category))],
@@ -126,12 +146,7 @@ export function HomePage() {
 
   const visibleProjects = useMemo(() => {
     if (activeCategory === "All") {
-      return featuredCategories
-        .slice(1)
-        .map((category) =>
-          featuredProjects.find((project) => project.category === category)
-        )
-        .filter(Boolean);
+      return featuredProjects.slice(0, 6);
     }
 
     return featuredProjects
@@ -197,10 +212,10 @@ export function HomePage() {
 
             <div className="hero__actions">
               <a className="button" href="#projects">
-                Explore the work
+                Review focus areas
               </a>
               <Link className="button button--secondary" to="/projects">
-                Open full catalog
+                Open evidence catalog
               </Link>
               <a
                 className="button button--ghost"
@@ -391,7 +406,7 @@ export function HomePage() {
                       {project.links[0].label}
                     </a>
                   ) : null}
-                  <Link to={categoryHref}>See more</Link>
+                  <Link to={categoryHref}>See related work</Link>
                 </div>
               </div>
             </article>
@@ -400,7 +415,7 @@ export function HomePage() {
 
         <div className="section__actions" data-reveal>
           <Link className="button" to={categoryHref}>
-            Browse the full catalog
+            Open evidence catalog
           </Link>
         </div>
       </section>
@@ -432,7 +447,7 @@ export function HomePage() {
                     >
                       {portfolio.links[0]?.label ?? "Open site"}
                     </a>
-                    <Link to="/projects?category=Portfolio%20Systems">Open the catalog</Link>
+                    <Link to="/projects?category=Portfolio%20Systems">See role pages</Link>
                   </div>
                 </div>
               </article>
@@ -466,7 +481,7 @@ export function HomePage() {
                   >
                     {portfolio.links[0]?.label ?? "Open site"}
                   </a>
-                  <Link to="/projects?category=Portfolio%20Systems">Open the catalog</Link>
+                  <Link to="/projects?category=Portfolio%20Systems">See role pages</Link>
                 </div>
               </article>
             ))}

@@ -81,8 +81,8 @@ function Header() {
   const sectionLinks = [
     { sectionId: "services", label: "Services" },
     { sectionId: "highlights", label: "Highlights" },
-    { sectionId: "projects", label: "Projects" },
-    { sectionId: "portfolio-system", label: "Sites" },
+    { sectionId: "projects", label: "Evidence" },
+    { sectionId: "portfolio-system", label: "Role Pages" },
     { sectionId: "insights", label: "Insights" },
     { sectionId: "contact", label: "Contact" }
   ];
@@ -144,6 +144,11 @@ function Header() {
 function Footer() {
   const { siteContent, projectCategories } = useSiteContentData();
   const { contact, sectionCopy, services } = siteContent;
+  const footerCategories = projectCategories.filter((category) =>
+    ["Network Security", "Pentesting", "Research and Systems", "Portfolio Systems"].includes(
+      category
+    )
+  );
   const reachLinks = [
     {
       href: `mailto:${contact.email}`,
@@ -204,7 +209,7 @@ function Footer() {
         <div className="site-footer__block">
           <h3>{sectionCopy.footer.categoriesTitle}</h3>
           <ul className="footer-list">
-            {projectCategories.slice(1).map((category) => (
+            {footerCategories.map((category) => (
               <li key={category}>
                 <Link to={`/projects?category=${encodeURIComponent(category)}`}>
                   {category}

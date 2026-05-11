@@ -34,76 +34,76 @@ export const defaultSiteContent = {
       eyebrow: "Portfolio"
     },
     hero: {
-      eyebrow: "Portfolio / computer science professional",
-      title: "Networks, security, products, and automation in one hiring story.",
+      eyebrow: "Network Security / IT Network Support",
+      title: "Network Security Engineer",
       lead:
-        "I move between live infrastructure, security validation, SaaS products, and technical tooling without losing the thread. The common signal is disciplined delivery: stable systems, evidence-led security work, and products that people can actually use."
+        "I help keep networks, users, and systems secure, connected, and reliable through troubleshooting, monitoring, firewall/VPN support, and practical automation."
     },
     overview: {
-      eyebrow: "What this portfolio shows",
-      title: "I bring infrastructure, security, and product delivery into one hire.",
+      eyebrow: "What this page shows",
+      title: "Network Security Engineer focused on secure, reliable infrastructure.",
       body:
-        "I built this portfolio to show the range I can bring to a team without diluting technical depth. I can move from network operations to security validation, from web applications to automation, and still keep the work structured, accountable, and clear for the people relying on it."
+        "My work is centred on firewall troubleshooting, VPN support, LAN and Wi-Fi connectivity, TCP/IP fundamentals, DNS/DHCP, monitoring, incident resolution, endpoint protection, and clear support documentation."
     },
     highlights: {
-      eyebrow: "Services and experience",
-      title: "What teams can bring me in to do.",
+      eyebrow: "Support and operations",
+      title: "Network and IT support capabilities.",
       body:
-        "The services are broad because the work already is. They still map cleanly to business outcomes: healthier systems, stronger validation, better tooling, and clearer delivery."
+        "The focus is practical operational support: restore service, reduce risk, document the fix, and keep users and systems working within SLA expectations."
     },
     projects: {
-      eyebrow: "Featured work",
-      title: "Project categories that go deeper than one job title.",
+      eyebrow: "Featured evidence",
+      title: "Network Security Focus Areas",
       body:
-        "The work moves from network-security labs to product platforms, portfolio systems, AI tooling, research, and interactive builds without breaking the same narrative."
+        "Selected labs and case-study work that support network security, infrastructure troubleshooting, defensive monitoring, and practical IT operations."
     },
     portfolio: {
-      eyebrow: "Portfolio sites",
-      title: "Each portfolio site reframes the work for a different hiring conversation.",
+      eyebrow: "Role evidence",
+      title: "Focused pages for network, security, and IT support roles.",
       body:
-        "The core body of work stays the same. What changes is the framing: network operations, cybersecurity, pentesting, IT delivery, technical publishing, and a more experimental 3D presentation."
+        "These pages keep the same evidence focused on the roles I am targeting: network operations, defensive security, and service-oriented IT support."
     },
     insights: {
-      eyebrow: "Notes and signals",
-      title: "Writing and references that strengthen the portfolio.",
+      eyebrow: "Notes and references",
+      title: "Writing that explains security and support decisions.",
       body:
-        "The project list matters, but so do the written explanations and the people who have already seen how I work under pressure."
+        "The written work shows how I reason through troubleshooting, visibility, hardening, and operational follow-up, while references show how I work under support pressure."
     },
     contact: {
       eyebrow: "Contact",
-      title: "Hire me for the work that needs range, discipline, and clarity.",
+      title: "Ready to support secure, reliable infrastructure.",
       body:
-        "If you need someone who can move from packet captures to product workflows, from lab evidence to stakeholder explanation, this is the portfolio built to make that obvious."
+        "I am looking for UK network security, IT network support, and infrastructure support roles where clear troubleshooting, documentation, and service ownership matter."
     },
     catalog: {
-      eyebrow: "Catalog",
-      title: "All the work, grouped by discipline and type.",
+      eyebrow: "Evidence catalog",
+      title: "Network, security, support, and research evidence.",
       body:
-        "This page is the wider project map behind the landing experience. It includes the technical labs, SaaS builds, role-focused portfolio sites, research projects, and application work that sit behind the portfolio."
+        "This page collects the technical labs, network-security work, support evidence, research projects, and selected automation examples behind the landing page."
     },
     catalogCta: {
       eyebrow: "Next move",
-      title: "Ready to connect the portfolio back to a role, brief, or service need?",
+      title: "Ready to connect the evidence back to a network or IT support role?",
       body:
-        "The landing page is built to tell the story quickly. This catalog is built to back that story up with breadth."
+        "The landing page gives the focused version. The catalog backs it up with labs, notes, and supporting technical work."
     },
     footer: {
       eyebrow: "Portfolio",
       servicesTitle: "Services",
-      categoriesTitle: "Project categories",
+      categoriesTitle: "Role-aligned areas",
       reachTitle: "Reach"
     }
   },
   contact: {
     name: "Shubodaya Kumar",
-    title: "Computer Science Professional",
-    subtitle: "Network engineering, cybersecurity, software products, and automation",
+    title: "Network Security Engineer",
+    subtitle: "Network Security Engineer / IT Network Support",
     location: "Plymouth, England",
-    availability: "Open to roles, consulting, and project collaborations",
+    availability: "Open to entry-level and junior Network Security Engineer / IT Network Support roles in the UK",
     email: "contact@shubodaya.dev",
     phone: "+44 7436301739",
     summary:
-      "I build and support systems across network engineering, cybersecurity, web products, automation, and technical storytelling so teams can ship, defend, and explain their environments with confidence.",
+      "I support secure, reliable infrastructure across firewalls, VPNs, LAN/Wi-Fi, DNS/DHCP, monitoring, Microsoft 365, Entra ID, Azure basics, endpoint protection, and IT operations documentation.",
     links: {
       resume:
         "https://docs.google.com/document/d/1_7zbqMzdl_wmW-mcFGJstg1HRwJrlj0dzo48k6ReFBg/edit?usp=sharing",
@@ -116,15 +116,15 @@ export const defaultSiteContent = {
   heroStats: [
     {
       value: "3+ years",
-      label: "production support and engineering work"
-    },
-    {
-      value: "28 projects",
-      label: "labs, products, portfolio systems, and creative builds"
+      label: "network, firewall, and IT support experience"
     },
     {
       value: "1,800+",
-      label: "annual cases handled in high-volume support"
+      label: "annual P1-P3 firewall, VPN, SD-WAN, HA, and routing cases"
+    },
+    {
+      value: "25+",
+      label: "UK on-site and remote support incidents resolved"
     },
     {
       value: "6+ certs",
@@ -133,137 +133,140 @@ export const defaultSiteContent = {
   ],
   keywordMarquee: [
     "Network engineering",
-    "Firewall and VPN operations",
-    "Pentesting labs",
-    "Threat detection",
-    "Azure and cloud labs",
-    "React products",
-    "Cloudflare platforms",
-    "AI and automation",
+    "Firewall troubleshooting",
+    "VPN support",
+    "LAN and Wi-Fi",
+    "TCP/IP",
+    "DNS and DHCP",
+    "Network monitoring",
     "Incident ownership",
-    "Documentation and stakeholder delivery",
-    "Portfolio systems",
-    "Full-stack builds"
+    "SLA support",
+    "Endpoint protection",
+    "Microsoft 365",
+    "Entra ID",
+    "Azure fundamentals",
+    "Operational automation",
+    "Documentation"
   ],
   storyTracks: [
     {
       id: "networks",
       eyebrow: "Track 01",
-      title: "Infrastructure that stays dependable",
+      title: "Secure, reliable connectivity",
       description:
-        "I work across routing, switching, firewalls, VPNs, and hybrid connectivity with the mindset that reliability is a feature, not a maintenance task.",
+        "I work through routing, switching, LAN/Wi-Fi, firewall, VPN, TCP/IP, DNS, and DHCP issues with a support mindset built around uptime and user impact.",
       metric: "25+ on-site and remote incidents resolved in current UK support work",
       image: "/assets/01_Infrastructure_that_202604132237.png",
       alt: "Infrastructure-focused visual for resilient network and platform delivery.",
       outcomes: [
-        "Routing, switching, LAN and WAN troubleshooting",
-        "Firewall policy, NAT, ACL, VPN, and access control changes",
-        "Customer-ready handover notes after live incidents and change windows",
-        "Operational monitoring and escalation workflows shaped around uptime",
-        "Lab-backed validation for core services, segmentation, and recovery paths"
+        "Routing, switching, LAN, WAN, and Wi-Fi troubleshooting",
+        "Firewall policy, NAT, ACL, and access-control support",
+        "VPN fault isolation and restoration checks",
+        "DNS, DHCP, and core service validation",
+        "Clear handover notes after incidents and change windows"
       ]
     },
     {
       id: "security",
       eyebrow: "Track 02",
-      title: "Security work backed by evidence",
+      title: "Monitoring and incident resolution",
       description:
-        "The security side of my portfolio is not theory-only. It connects attack validation, packet evidence, SIEM telemetry, and hardening decisions that defenders can act on.",
-      metric: "From OWASP and WAF validation to Home SOC and intrusion-detection research",
+        "I connect alerts, logs, packet evidence, and user reports into practical triage so incidents can be understood, escalated, documented, and closed properly.",
+      metric: "From SonicWall cases to Sentinel labs and network intrusion-detection research",
       image: "/assets/02_Security_work_202604142136.png",
       alt: "Security-focused visual for threat validation, defense, and telemetry work.",
       outcomes: [
-        "Pentesting, validation labs, and control effectiveness checks",
-        "Microsoft Sentinel, traffic analysis, and threat-detection workflows",
-        "Research grounded in ISO 21434, threat modeling, and remediation logic",
-        "Security write-ups that explain exposure, visibility, and remediation clearly",
-        "Defensive workflows that connect alerts, logs, and attack-path reasoning"
+        "Firewall, VPN, SD-WAN, HA, and routing case handling",
+        "Network monitoring, log review, and escalation support",
+        "Microsoft Sentinel and traffic-analysis lab practice",
+        "Incident notes written for follow-up and knowledge reuse",
+        "Troubleshooting shaped by SLA and service-restoration priorities"
       ]
     },
     {
-      id: "products",
+      id: "tooling",
       eyebrow: "Track 03",
-      title: "Products that people can actually use",
+      title: "Security tools and endpoint protection",
       description:
-        "Alongside infrastructure and security, I build product-grade interfaces, dashboards, workflows, and SaaS experiences across finance, scheduling, fitness, portfolio creation, and order management.",
-      metric: "From expense analytics and scheduling platforms to portfolio builders and ordering systems",
+        "I use security tooling to support defensive operations, from endpoint protection and hardening checks to visibility across authentication, traffic, and suspicious behaviour.",
+      metric: "Hands-on work across defensive labs, endpoint controls, and security investigation workflows",
       image: "/assets/03_Products_that_202604142137.png",
-      alt: "Product-focused visual for application delivery, workflows, and platforms.",
+      alt: "Security tooling visual for endpoint protection, monitoring, and defensive workflows.",
       outcomes: [
-        "React, Vite, Next.js, Tailwind, Cloudflare, and Firebase delivery",
-        "Account flows, dashboards, multi-step tools, and admin workflows",
-        "UI decisions shaped by clarity, state management, and real user journeys",
-        "Marketplace, scheduling, finance, and builder workflows handled in one portfolio",
-        "Live deployments that show product polish rather than concept-only prototypes"
+        "Endpoint security and basic hardening awareness",
+        "Microsoft Sentinel, KQL, and suspicious-authentication analysis",
+        "OWASP and WAF validation from a defensive perspective",
+        "Threat-model and risk-analysis practice from MSc work",
+        "Security notes that separate symptoms, root cause, and remediation"
       ]
     },
     {
       id: "delivery",
       eyebrow: "Track 04",
-      title: "Communication that survives scrutiny",
+      title: "Identity, cloud, and support automation",
       description:
-        "My value is not just building the thing. It is explaining what changed, what matters, what failed, and what to do next in a way that recruiters, engineers, and clients can all follow.",
-      metric: "From KB articles and support escalations to role-specific portfolio systems",
+        "I use Microsoft 365, Entra ID, Azure fundamentals, and small scripts as part of IT operations support, not as a separate career direction.",
+      metric: "From KB articles and support escalations to practical PowerShell, Python, and Azure lab work",
       image: "/assets/04_Communication_that_202604152253.png",
       alt: "Communication-focused visual for delivery, documentation, and stakeholder clarity.",
       outcomes: [
+        "Microsoft 365 and Entra ID support fundamentals",
+        "Azure basics, Sentinel labs, and cloud-security awareness",
+        "PowerShell and Python used for diagnostics and support tasks",
         "Knowledge-base writing and incident documentation",
-        "Role-focused portfolio systems for different hiring conversations",
-        "Clear translation between technical detail and business impact",
-        "Technical posts that explain why a system or control matters",
-        "Delivery updates shaped for engineers, hiring teams, and clients alike"
+        "User and system troubleshooting with clear next-step communication"
       ]
     }
   ],
   services: [
     {
-      title: "Network engineering and escalation support",
+      title: "Firewall, VPN, and network troubleshooting",
       description:
-        "Operational support for routing, switching, firewall, VPN, and access issues in real customer environments.",
+        "Operational support for connectivity, firewall policy, VPN access, routing, and switching issues in real customer environments.",
       deliverables: [
-        "LAN and WAN troubleshooting",
-        "Routing, NAT, ACL, HA, and VPN changes",
-        "Post-incident validation and handover"
+        "Firewall rule, NAT, ACL, and HA checks",
+        "Remote-access and site-to-site VPN support",
+        "Routing, switching, LAN, WAN, and Wi-Fi troubleshooting"
       ]
     },
     {
-      title: "Security testing and validation",
+      title: "Monitoring, incidents, and SLA support",
       description:
-        "Labs and assessments that focus on exploitability, detection visibility, and the hardening path that follows.",
+        "Structured triage for alerts, user reports, service-impacting issues, escalations, and post-incident follow-up.",
       deliverables: [
-        "OWASP and WAF validation",
-        "Threat detection and SIEM checks",
-        "Research-led security architecture work"
+        "Log review and incident notes",
+        "P1-P3 case handling and escalation support",
+        "Service restoration and closure documentation"
       ]
     },
     {
-      title: "Web application and SaaS delivery",
+      title: "Security tools and endpoint protection",
       description:
-        "Product builds with authentication, dashboards, workflows, and clean information architecture.",
+        "Defensive security support across endpoint controls, SIEM visibility, hardening checks, and practical remediation evidence.",
       deliverables: [
-        "React and Next.js interfaces",
-        "Cloudflare and Firebase-backed workflows",
-        "Admin tools and production-ready UX"
+        "Microsoft Sentinel and KQL lab work",
+        "Endpoint protection and hardening awareness",
+        "OWASP, WAF, and control-validation notes"
       ]
     },
     {
-      title: "Cloud, identity, and platform hardening",
+      title: "Microsoft 365, Entra ID, and Azure basics",
       description:
-        "Cloud-connected labs and service baselines shaped by least privilege, sensible segmentation, and observability.",
+        "IT support knowledge across common Microsoft cloud and identity tasks, with awareness of least privilege and secure access.",
       deliverables: [
-        "Azure and AWS lab setups",
-        "Identity and access patterns",
-        "Linux hardening and service reduction"
+        "Microsoft 365 support fundamentals",
+        "Entra ID users, groups, and access basics",
+        "Azure and cloud-security lab practice"
       ]
     },
     {
-      title: "Automation and internal tooling",
+      title: "Documentation and IT operations automation",
       description:
-        "Workflow acceleration through scripts, diagnostics, AI features, and operator-focused tool design.",
+        "Small scripts and repeatable notes used to speed up diagnostics, reduce manual effort, and make fixes easier to repeat.",
       deliverables: [
-        "Python and PowerShell automation",
-        "Diagnostic and log analysis tooling",
-        "Voice-first and export-friendly interfaces"
+        "PowerShell and Python support scripts",
+        "Diagnostic checklists and knowledge-base articles",
+        "User and system troubleshooting notes"
       ]
     }
   ],
@@ -286,7 +289,7 @@ export const defaultSiteContent = {
       title: "MSc Cybersecurity",
       metric: "Distinction",
       detail:
-        "Completed an NCSC-certified MSc focused on network, application, and cloud security with hands-on labs and research.",
+        "Completed an NCSC-certified MSc focused on network, cloud, risk, and defensive security with hands-on labs and research.",
       tags: ["Threat modeling", "OWASP", "Risk and governance"]
     },
     {
@@ -299,33 +302,33 @@ export const defaultSiteContent = {
   ],
   hiringReasons: [
     {
-      title: "Range without fragmentation",
+      title: "Operational networking base",
       description:
-        "The portfolio spans network operations, cybersecurity, software products, automation, and research, but it still tells one coherent story: technical depth that can move across layers.",
+        "The strongest signal is practical infrastructure support: connectivity, firewall/VPN cases, monitoring, escalation, and service restoration.",
       items: [
-        "Infrastructure, security, and software in one stack",
-        "Comfortable with both incident pressure and product polish",
-        "Able to switch context without losing rigor"
+        "TCP/IP, LAN/Wi-Fi, DNS, DHCP, routing, and switching",
+        "Firewall, VPN, SD-WAN, HA, NAT, and ACL support",
+        "Customer-facing incident handling in UK support environments"
       ]
     },
     {
-      title: "Evidence over vague claims",
+      title: "Security mindset in support work",
       description:
-        "The work is backed by case studies, write-ups, live products, and focused labs rather than broad claims with no artifacts behind them.",
+        "The security work supports defensive operations: better visibility, cleaner triage, practical hardening, and evidence-led remediation.",
       items: [
-        "GitHub repositories and deployed products",
-        "Blog posts and technical walkthroughs",
-        "Operational and academic track record"
+        "Microsoft Sentinel and network traffic analysis labs",
+        "Endpoint protection and secure-access awareness",
+        "Threat modeling, OWASP, WAF, and remediation notes"
       ]
     },
     {
-      title: "Clear with stakeholders",
+      title: "Clear documentation under pressure",
       description:
-        "I have spent enough time in customer and escalation work to know that strong communication is part of the engineering, not a soft add-on.",
+        "Support work only closes properly when the fix, impact, evidence, and next step are clear to users, engineers, and service teams.",
       items: [
         "Concise technical updates under pressure",
         "Documentation that others can pick up quickly",
-        "Delivery framed around outcomes, not only activity"
+        "SLA-aware closure notes and knowledge-base writing"
       ]
     }
   ],
@@ -350,7 +353,7 @@ export const defaultSiteContent = {
       title: "Field notes across networking, cybersecurity, and automation",
       category: "Technical Writing",
       summary:
-        "The writing side of the portfolio exists to show how the reasoning behind the work holds up when explained clearly.",
+        "Notes on troubleshooting, secure access, monitoring, and operations automation used to make support work clearer and more repeatable.",
       link: "https://blog.shubodaya.dev/",
       linkLabel: "Browse blog"
     }
