@@ -20,26 +20,6 @@ import {
 
 const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 
-const treeGroups = [
-  {
-    title: "3D page tree",
-    links: [
-      { id: "admin-3d-profile", label: "Profile and hero" },
-      { id: "admin-3d-sections", label: "Route sections" },
-      ...tileSectionIds.map((id) => ({ id: `admin-3d-tile-${id}`, label: `Tile: ${defaultThreeDContent.tiles[id]?.title ?? id}` }))
-    ]
-  },
-  {
-    title: "2D page tree",
-    links: [
-      { id: "admin-2d-brand", label: "Brand and contact" },
-      { id: "admin-2d-copy", label: "Section copy" },
-      { id: "admin-2d-home", label: "Home content" },
-      { id: "admin-2d-featured", label: "Featured work" }
-    ]
-  }
-];
-
 const sectionCopyGroups = [
   ["brand", "Brand"],
   ["hero", "Hero"],
@@ -127,27 +107,95 @@ const contentGroups = [
   }
 ];
 
+const editableProjectKeys = [
+  "title",
+  "year",
+  "category",
+  "type",
+  "summary",
+  "proof",
+  "stack",
+  "outcomes",
+  "image",
+  "alt",
+  "featured",
+  "links"
+];
+
+const buildTreeGroups = (projectEditors) => [
+  {
+    title: "3D page tree",
+    links: [
+      { id: "admin-3d-profile", label: "Profile and hero" },
+      { id: "admin-3d-sections", label: "Route sections" },
+      ...tileSectionIds.map((id) => ({ id: `admin-3d-tile-${id}`, label: `Tile: ${defaultThreeDContent.tiles[id]?.title ?? id}` }))
+    ]
+  },
+  {
+    title: "2D page tree",
+    links: [
+      { id: "admin-2d-brand", label: "Brand and contact" },
+      {
+        id: "admin-2d-copy",
+        label: "Section copy",
+        children: sectionCopyGroups.map(([group, label]) => ({
+          id: `admin-2d-copy-${group}`,
+          label
+        }))
+      },
+      {
+        id: "admin-2d-home",
+        label: "Home content",
+        children: [
+          { id: "admin-2d-keywordMarquee", label: "Keyword marquee" },
+          ...contentGroups.map((group) => ({ id: `admin-2d-${group.key}`, label: group.title }))
+        ]
+      },
+      {
+        id: "admin-2d-projects",
+        label: "Project catalog",
+        children: [
+          { id: "admin-2d-featured", label: "Featured selector" },
+          ...projectEditors.map((project) => ({
+            id: `admin-2d-project-${project.slug}`,
+            label: project.title || project.slug
+          }))
+        ]
+      }
+    ]
+  }
+];
+
+const cloneProjectEditor = (project) => ({
+  ...project,
+  featured: Boolean(project.featured),
+  stack: Array.isArray(project.stack) ? [...project.stack] : [],
+  outcomes: Array.isArray(project.outcomes) ? [...project.outcomes] : [],
+  links: Array.isArray(project.links) ? project.links.map((link) => ({ ...link })) : []
+});
+
 const createProjectEditors = (projects) =>
-  projects
-    .filter((project) => project.category !== "Portfolio Systems")
-    .map((project) => ({
-      slug: project.slug,
-      title: project.title,
-      category: project.category,
-      featured: Boolean(project.featured)
-    }));
+  projects.map((project) => cloneProjectEditor(project));
 
 const createProjectOverrides = (projects) =>
   projects.reduce((accumulator, project) => {
     const defaultProject = defaultProjects.find((item) => item.slug === project.slug);
 
-    if (!defaultProject || project.featured === defaultProject.featured) {
+    if (!defaultProject) {
       return accumulator;
     }
 
-    accumulator[project.slug] = {
-      featured: project.featured
-    };
+    const override = {};
+
+    editableProjectKeys.forEach((key) => {
+      if (JSON.stringify(project[key]) !== JSON.stringify(defaultProject[key])) {
+        override[key] = project[key];
+      }
+    });
+
+    if (Object.keys(override).length > 0) {
+      accumulator[project.slug] = override;
+    }
 
     return accumulator;
   }, {});
@@ -249,7 +297,7 @@ function StringListEditor({ addLabel = "Add item", items, label, onChange }) {
   );
 }
 
-function StructuredListEditor({ allowAddRemove = true, allowReorder = true, fields, items, listFields = [], onChange, title }) {
+function StructuredListEditor({ allowAddRemove = true, allowReorder = true, fields, id, items, listFields = [], onChange, title }) {
   const list = Array.isArray(items) ? items : [];
 
   const updateItem = (index, key, value) => {
@@ -257,7 +305,7 @@ function StructuredListEditor({ allowAddRemove = true, allowReorder = true, fiel
   };
 
   return (
-    <section className="admin-fieldset">
+    <section className="admin-fieldset" id={id}>
       <div className="admin-fieldset__head">
         <h3>{title}</h3>
         {allowAddRemove ? (
@@ -322,6 +370,17 @@ function StructuredListEditor({ allowAddRemove = true, allowReorder = true, fiel
   );
 }
 
+function TreeLinks({ links, level = 0 }) {
+  return links.map((section) => (
+    <div className="admin-tree__item" key={section.id}>
+      <a className={`admin-sidebar__link${level > 0 ? " admin-sidebar__link--child" : ""}`} href={`#${section.id}`}>
+        {section.label}
+      </a>
+      {section.children ? <div className="admin-tree__children"><TreeLinks links={section.children} level={level + 1} /></div> : null}
+    </div>
+  ));
+}
+
 function ThreeDTileEditor({ id, onChange, tile }) {
   const updateTile = (key, value) => {
     onChange({ ...tile, [key]: value });
@@ -338,6 +397,83 @@ function ThreeDTileEditor({ id, onChange, tile }) {
         <Field label="Body" multiline value={tile.body} onChange={(value) => updateTile("body", value)} />
       </div>
       <StringListEditor label="Tile lines" items={tile.lines} onChange={(value) => updateTile("lines", value)} />
+    </section>
+  );
+}
+
+function ProjectLinksEditor({ links, onChange }) {
+  const list = Array.isArray(links) ? links : [];
+  const updateLink = (index, key, value) => {
+    onChange(list.map((link, linkIndex) => (linkIndex === index ? { ...link, [key]: value } : link)));
+  };
+
+  return (
+    <div className="admin-list-editor">
+      <div className="admin-list-editor__head">
+        <span>Links</span>
+        <button className="admin-btn admin-btn--ghost admin-btn--small" type="button" onClick={() => onChange([...list, { label: "", url: "" }])}>
+          Add link
+        </button>
+      </div>
+      {list.map((link, index) => (
+        <div className="admin-link-row" key={`project-link-${index}`}>
+          <input type="text" value={link.label ?? ""} placeholder="Label" onChange={(event) => updateLink(index, "label", event.target.value)} />
+          <input type="url" value={link.url ?? ""} placeholder="URL" onChange={(event) => updateLink(index, "url", event.target.value)} />
+          <button className="admin-btn admin-btn--ghost admin-btn--icon" type="button" onClick={() => onChange(moveItem(list, index, -1))}>
+            Up
+          </button>
+          <button className="admin-btn admin-btn--ghost admin-btn--icon" type="button" onClick={() => onChange(moveItem(list, index, 1))}>
+            Down
+          </button>
+          <button className="admin-btn admin-btn--danger admin-btn--icon" type="button" onClick={() => onChange(list.filter((_, linkIndex) => linkIndex !== index))}>
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProjectCatalogEditor({ onChange, projects }) {
+  const updateProject = (index, key, value) => {
+    onChange(projects.map((project, projectIndex) => (projectIndex === index ? { ...project, [key]: value } : project)));
+  };
+
+  return (
+    <section className="admin-card" id="admin-2d-projects">
+      <h2>2D project catalog</h2>
+      <p className="admin-muted">Edit project and catalog entries used by the 2D landing page and catalog pages.</p>
+      <div className="admin-stack">
+        {projects.map((project, index) => (
+          <article className="admin-repeat-card" id={`admin-2d-project-${project.slug}`} key={project.slug}>
+            <div className="admin-repeat-card__head">
+              <strong>{project.title || project.slug}</strong>
+              <label className="admin-checkbox">
+                <input
+                  type="checkbox"
+                  checked={Boolean(project.featured)}
+                  onChange={(event) => updateProject(index, "featured", event.target.checked)}
+                />
+                Featured
+              </label>
+            </div>
+            <div className="admin-form admin-form--two-col">
+              <Field label="Slug" readOnly value={project.slug} onChange={() => {}} />
+              <Field label="Title" value={project.title} onChange={(value) => updateProject(index, "title", value)} />
+              <Field label="Year" value={project.year} onChange={(value) => updateProject(index, "year", value)} />
+              <Field label="Category" value={project.category} onChange={(value) => updateProject(index, "category", value)} />
+              <Field label="Type" value={project.type} onChange={(value) => updateProject(index, "type", value)} />
+              <Field label="Image path" value={project.image} onChange={(value) => updateProject(index, "image", value)} />
+              <Field label="Alt text" multiline value={project.alt} onChange={(value) => updateProject(index, "alt", value)} />
+              <Field label="Summary" multiline value={project.summary} onChange={(value) => updateProject(index, "summary", value)} />
+              <Field label="Proof" multiline value={project.proof} onChange={(value) => updateProject(index, "proof", value)} />
+            </div>
+            <StringListEditor label="Stack" items={project.stack} onChange={(value) => updateProject(index, "stack", value)} />
+            <StringListEditor label="Outcomes" items={project.outcomes} onChange={(value) => updateProject(index, "outcomes", value)} />
+            <ProjectLinksEditor links={project.links} onChange={(value) => updateProject(index, "links", value)} />
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -371,6 +507,7 @@ export function AdminPortal() {
   const [contentMessage, setContentMessage] = useState("");
   const ownerExists = !session.setupRequired;
   const authenticated = session.authenticated;
+  const adminTreeGroups = buildTreeGroups(projectEditors);
 
   const syncDraft = (nextContent, nextThreeDContent) => {
     setDraft(cloneSiteContent(nextContent));
@@ -672,15 +809,11 @@ export function AdminPortal() {
               <a className="admin-sidebar__link" href="#admin-publish">
                 Publish
               </a>
-              {treeGroups.map((group) => (
+              {adminTreeGroups.map((group) => (
                 <div className="admin-tree" key={group.title}>
                   <strong>{group.title}</strong>
                   <nav className="admin-sidebar__nav" aria-label={group.title}>
-                    {group.links.map((section) => (
-                      <a className="admin-sidebar__link" href={`#${section.id}`} key={section.id}>
-                        {section.label}
-                      </a>
-                    ))}
+                    <TreeLinks links={group.links} />
                   </nav>
                 </div>
               ))}
@@ -780,7 +913,7 @@ export function AdminPortal() {
               <h2>2D section copy</h2>
               <div className="admin-stack">
                 {sectionCopyGroups.map(([group, label]) => (
-                  <section className="admin-fieldset" key={group}>
+                  <section className="admin-fieldset" id={`admin-2d-copy-${group}`} key={group}>
                     <h3>{label}</h3>
                     <div className="admin-form admin-form--two-col">
                       {Object.keys(draft.sectionCopy[group]).map((field) => (
@@ -802,11 +935,13 @@ export function AdminPortal() {
               <h2>2D home content</h2>
               <div className="admin-stack">
                 <section className="admin-fieldset">
+                  <span id="admin-2d-keywordMarquee" className="admin-anchor" />
                   <h3>Keyword marquee</h3>
                   <StringListEditor label="Keywords" items={draft.keywordMarquee} onChange={(value) => updateSite(["keywordMarquee"], value)} />
                 </section>
                 {contentGroups.map((group) => (
                   <StructuredListEditor
+                    id={`admin-2d-${group.key}`}
                     key={group.key}
                     title={group.title}
                     fields={group.fields}
@@ -841,6 +976,7 @@ export function AdminPortal() {
                 ))}
               </div>
             </section>
+            <ProjectCatalogEditor projects={projectEditors} onChange={setProjectEditors} />
           </div>
         </form>
       ) : null}

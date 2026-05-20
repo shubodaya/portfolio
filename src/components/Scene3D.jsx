@@ -358,8 +358,16 @@ function TilePhotoLayer({ active, height, image, width }) {
   return (
     <mesh position={[0, 0, 0.045]} renderOrder={2}>
       <planeGeometry args={[width - 0.18, height - 0.18]} />
-      <meshBasicMaterial color="#d7fff7" depthWrite={false} map={texture} opacity={active ? 0.12 : 0.05} transparent />
+      <meshBasicMaterial color="#d7fff7" depthWrite={false} map={texture} opacity={active ? 0.028 : 0.012} transparent />
     </mesh>
+  );
+}
+
+function TileReadabilityLayer({ active, height, width }) {
+  return (
+    <RoundedBox args={[width - 0.28, height - 0.34, 0.018]} position={[0, -0.02, 0.058]} radius={0.052} smoothness={5} renderOrder={3}>
+      <meshBasicMaterial color="#02080b" depthWrite={false} opacity={active ? 0.68 : 0.34} transparent />
+    </RoundedBox>
   );
 }
 
@@ -437,7 +445,7 @@ function SectionGate({ activeScene, compact, curve, scrollProgress }) {
 }
 
 function estimateTileLines(textItems, compact) {
-  const wrapAt = compact ? 34 : 54;
+  const wrapAt = compact ? 28 : 46;
   return textItems.reduce((total, item) => total + Math.max(1, Math.ceil(item.length / wrapAt)), 0);
 }
 
@@ -449,10 +457,10 @@ function getTileMetrics({ body, compact, lines = [], scene, title }) {
 
   return {
     dense,
-    height: compact ? (dense ? 2.68 : 2.08) : isHero ? 2.04 : dense ? 2.9 : 2.34,
+    height: compact ? (dense ? 2.96 : 2.24) : isHero ? 2.04 : dense ? 3.18 : 2.5,
     longTitle,
-    scale: isHero ? 0.96 : compact ? 0.9 : 1.1,
-    width: compact ? (dense ? 3.05 : 2.82) : isHero ? 3.4 : dense ? 4.42 : 3.82
+    scale: isHero ? 0.96 : compact ? 0.9 : 1.14,
+    width: compact ? (dense ? 3.2 : 2.9) : isHero ? 3.4 : dense ? 4.74 : 4.02
   };
 }
 
@@ -462,16 +470,18 @@ function ContentTile3D({ active, body, color, compact, href, icon, image, kicker
   const glowRef = useRef(null);
   const isHero = scene === "hero";
   const { dense, height, longTitle, scale: activeScale, width } = getTileMetrics({ body, compact, lines, scene, title });
-  const titleSize = compact ? (longTitle ? 0.12 : 0.15) : isHero ? 0.17 : longTitle ? 0.16 : dense ? 0.2 : 0.23;
-  const bodySize = compact ? 0.073 : 0.1;
-  const bodyLineHeight = compact ? 1.12 : 1.14;
+  const titleSize = compact ? (longTitle ? 0.112 : 0.145) : isHero ? 0.17 : longTitle ? 0.158 : dense ? 0.205 : 0.235;
+  const bodySize = compact ? (dense ? 0.064 : 0.071) : dense ? 0.096 : 0.102;
+  const bodyLineHeight = compact ? 1.2 : 1.18;
   const kickerSize = compact ? 0.074 : isHero ? 0.078 : dense ? 0.078 : 0.09;
-  const bodyOffset = compact ? (dense ? 0.88 : longTitle ? 1.02 : 0.92) : dense ? 0.82 : longTitle ? 1.15 : 0.96;
+  const bodyOffset = compact ? (dense ? 1.08 : longTitle ? 1.08 : 1) : dense ? 1.08 : longTitle ? 1.22 : 1.04;
   const bodyText = [body, ...lines].filter(Boolean).join("\n");
   const portX = position.x >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
   const hasIcon = Boolean(icon);
   const logoReserve = hasIcon ? (compact ? 0.68 : 0.88) : 0;
   const titleTop = height / 2 - (compact ? 0.36 : 0.42);
+  const bodyX = -width / 2 + 0.24;
+  const bodyMaxWidth = width - 0.56;
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
@@ -531,6 +541,7 @@ function ContentTile3D({ active, body, color, compact, href, icon, image, kicker
         <meshBasicMaterial color={color} transparent opacity={0.05} blending={THREE.AdditiveBlending} depthWrite={false} />
       </RoundedBox>
       <TilePhotoLayer active={active} height={height} image={image} width={width} />
+      <TileReadabilityLayer active={active} height={height} width={width} />
       {hasIcon ? <TileLogoLayer active={active} color={color} compact={compact} icon={icon} titleTop={titleTop} width={width} /> : null}
       <mesh position={[portX, compact ? -0.04 : -0.06, 0.115]} renderOrder={7}>
         <boxGeometry args={[0.18, 0.072, 0.042]} />
@@ -569,8 +580,8 @@ function ContentTile3D({ active, body, color, compact, href, icon, image, kicker
         fontSize={bodySize}
         lineHeight={bodyLineHeight}
         material-depthTest={false}
-        maxWidth={width - 0.36}
-        position={[-width / 2 + 0.18, height / 2 - bodyOffset, 0.07]}
+        maxWidth={bodyMaxWidth}
+        position={[bodyX, height / 2 - bodyOffset, 0.07]}
         renderOrder={6}
       >
         {bodyText}
