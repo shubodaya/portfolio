@@ -124,6 +124,7 @@ const editableProjectKeys = [
 
 const buildTreeGroups = (projectEditors) => [
   {
+    id: "admin-tree-3d",
     title: "3D page tree",
     links: [
       { id: "admin-3d-profile", label: "Profile and hero" },
@@ -132,6 +133,7 @@ const buildTreeGroups = (projectEditors) => [
     ]
   },
   {
+    id: "admin-tree-2d",
     title: "2D page tree",
     links: [
       { id: "admin-2d-brand", label: "Brand and contact" },
@@ -165,6 +167,14 @@ const buildTreeGroups = (projectEditors) => [
     ]
   }
 ];
+
+const defaultExpandedTree = {
+  "admin-tree-3d": true,
+  "admin-tree-2d": true,
+  "admin-2d-copy": false,
+  "admin-2d-home": false,
+  "admin-2d-projects": false
+};
 
 const cloneProjectEditor = (project) => ({
   ...project,
@@ -370,13 +380,52 @@ function StructuredListEditor({ allowAddRemove = true, allowReorder = true, fiel
   );
 }
 
-function TreeLinks({ links, level = 0 }) {
+const collectExpandableTreeIds = (groups) => {
+  const ids = [];
+
+  const collectLinks = (links) => {
+    links.forEach((link) => {
+      if (link.children?.length) {
+        ids.push(link.id);
+        collectLinks(link.children);
+      }
+    });
+  };
+
+  groups.forEach((group) => {
+    ids.push(group.id);
+    collectLinks(group.links);
+  });
+
+  return ids;
+};
+
+function TreeLinks({ expandedTree, links, level = 0, toggleTree }) {
   return links.map((section) => (
     <div className="admin-tree__item" key={section.id}>
-      <a className={`admin-sidebar__link${level > 0 ? " admin-sidebar__link--child" : ""}`} href={`#${section.id}`}>
-        {section.label}
-      </a>
-      {section.children ? <div className="admin-tree__children"><TreeLinks links={section.children} level={level + 1} /></div> : null}
+      <div className="admin-tree__row">
+        {section.children ? (
+          <button
+            aria-controls={`${section.id}-children`}
+            aria-expanded={Boolean(expandedTree[section.id])}
+            className="admin-tree__toggle"
+            onClick={() => toggleTree(section.id)}
+            type="button"
+          >
+            {expandedTree[section.id] ? "-" : "+"}
+          </button>
+        ) : (
+          <span className="admin-tree__toggle-spacer" />
+        )}
+        <a className={`admin-sidebar__link${level > 0 ? " admin-sidebar__link--child" : ""}`} href={`#${section.id}`}>
+          {section.label}
+        </a>
+      </div>
+      {section.children && expandedTree[section.id] ? (
+        <div className="admin-tree__children" id={`${section.id}-children`}>
+          <TreeLinks expandedTree={expandedTree} links={section.children} level={level + 1} toggleTree={toggleTree} />
+        </div>
+      ) : null}
     </div>
   ));
 }
@@ -505,9 +554,25 @@ export function AdminPortal() {
   const [authMessage, setAuthMessage] = useState("");
   const [contentError, setContentError] = useState("");
   const [contentMessage, setContentMessage] = useState("");
+  const [expandedTree, setExpandedTree] = useState(() => ({ ...defaultExpandedTree }));
   const ownerExists = !session.setupRequired;
   const authenticated = session.authenticated;
   const adminTreeGroups = buildTreeGroups(projectEditors);
+
+  const toggleTree = (id) => {
+    setExpandedTree((current) => ({
+      ...current,
+      [id]: !current[id]
+    }));
+  };
+
+  const expandTree = (expanded) => {
+    const next = {};
+    collectExpandableTreeIds(adminTreeGroups).forEach((id) => {
+      next[id] = expanded;
+    });
+    setExpandedTree(next);
+  };
 
   const syncDraft = (nextContent, nextThreeDContent) => {
     setDraft(cloneSiteContent(nextContent));
@@ -806,15 +871,34 @@ export function AdminPortal() {
           <aside className="admin-sidebar">
             <div className="admin-sidebar__panel">
               <p className="admin-console__eyebrow">Section tree</p>
+              <div className="admin-tree__controls" aria-label="Section tree controls">
+                <button className="admin-tree__control" type="button" onClick={() => expandTree(true)}>
+                  Expand all
+                </button>
+                <button className="admin-tree__control" type="button" onClick={() => expandTree(false)}>
+                  Collapse all
+                </button>
+              </div>
               <a className="admin-sidebar__link" href="#admin-publish">
                 Publish
               </a>
               {adminTreeGroups.map((group) => (
                 <div className="admin-tree" key={group.title}>
-                  <strong>{group.title}</strong>
-                  <nav className="admin-sidebar__nav" aria-label={group.title}>
-                    <TreeLinks links={group.links} />
-                  </nav>
+                  <button
+                    aria-controls={`${group.id}-children`}
+                    aria-expanded={Boolean(expandedTree[group.id])}
+                    className="admin-tree__group-toggle"
+                    onClick={() => toggleTree(group.id)}
+                    type="button"
+                  >
+                    <span>{group.title}</span>
+                    <b>{expandedTree[group.id] ? "-" : "+"}</b>
+                  </button>
+                  {expandedTree[group.id] ? (
+                    <nav className="admin-sidebar__nav" id={`${group.id}-children`} aria-label={group.title}>
+                      <TreeLinks expandedTree={expandedTree} links={group.links} toggleTree={toggleTree} />
+                    </nav>
+                  ) : null}
                 </div>
               ))}
             </div>

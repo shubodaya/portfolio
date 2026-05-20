@@ -2371,10 +2371,46 @@ button {
   padding-top: 0.85rem;
 }
 
-.twod-clone .admin-tree > strong {
+.twod-clone .admin-tree__group-toggle {
+  align-items: center;
+  background: rgba(245, 207, 120, 0.08);
+  border: 1px solid rgba(245, 207, 120, 0.22);
+  border-radius: 8px;
   color: #f5cf78;
+  cursor: pointer;
+  display: flex;
   font-size: 0.78rem;
+  font-weight: 800;
+  justify-content: space-between;
   letter-spacing: 0.08em;
+  min-height: 2.45rem;
+  padding: 0.6rem 0.72rem;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.twod-clone .admin-tree__group-toggle b {
+  color: #edf8ff;
+  font-size: 0.98rem;
+  line-height: 1;
+}
+
+.twod-clone .admin-tree__controls {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.twod-clone .admin-tree__control {
+  border: 1px solid rgba(112, 213, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(112, 213, 255, 0.06);
+  color: #e7f4ff;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  min-height: 2.1rem;
+  padding: 0.45rem 0.5rem;
   text-transform: uppercase;
 }
 
@@ -2383,12 +2419,38 @@ button {
   gap: 0.4rem;
 }
 
+.twod-clone .admin-tree__row {
+  align-items: stretch;
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: 2rem minmax(0, 1fr);
+}
+
 .twod-clone .admin-tree__children {
   border-left: 1px solid rgba(112, 213, 255, 0.22);
   display: grid;
   gap: 0.36rem;
-  margin-left: 0.55rem;
+  margin-left: 1rem;
   padding-left: 0.55rem;
+}
+
+.twod-clone .admin-tree__toggle,
+.twod-clone .admin-tree__toggle-spacer {
+  border-radius: 8px;
+  min-height: 2.28rem;
+}
+
+.twod-clone .admin-tree__toggle {
+  border: 1px solid rgba(112, 213, 255, 0.2);
+  background: rgba(112, 213, 255, 0.06);
+  color: #e7f4ff;
+  cursor: pointer;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.twod-clone .admin-tree__toggle-spacer {
+  border: 1px solid transparent;
 }
 
 .twod-clone .admin-sidebar__link--child {
