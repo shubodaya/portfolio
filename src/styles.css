@@ -2395,6 +2395,12 @@ button {
   line-height: 1;
 }
 
+.twod-clone .admin-tree__group-toggle.is-active {
+  background: rgba(112, 213, 255, 0.12);
+  border-color: rgba(112, 213, 255, 0.38);
+  color: #edf8ff;
+}
+
 .twod-clone .admin-tree__controls {
   display: grid;
   gap: 0.45rem;
@@ -2456,6 +2462,16 @@ button {
 .twod-clone .admin-sidebar__link--child {
   font-size: 0.82rem;
   padding: 0.5rem 0.62rem;
+}
+
+.twod-clone .admin-page-card {
+  background:
+    linear-gradient(135deg, rgba(112, 213, 255, 0.12), transparent 44%),
+    rgba(8, 13, 18, 0.84);
+}
+
+.twod-clone .admin-page-card h2 {
+  margin: 0;
 }
 
 .twod-clone .admin-fieldset {

@@ -400,6 +400,44 @@ function TileLogoLayer({ active, color, compact, icon, titleTop, width }) {
   );
 }
 
+function TileSignalRail({ active, color, compact, height, lineCount, width }) {
+  const railRefs = useRef([]);
+  const count = Math.min(compact ? 5 : 7, Math.max(4, lineCount + 1));
+  const railHeight = height - (compact ? 0.78 : 0.92);
+  const top = railHeight / 2;
+
+  useFrame(({ clock }) => {
+    railRefs.current.forEach((rail, index) => {
+      if (!rail) return;
+      const pulse = 0.5 + Math.sin(clock.elapsedTime * 2.2 + index * 0.74) * 0.5;
+      rail.material.opacity = THREE.MathUtils.lerp(rail.material.opacity, active ? 0.12 + pulse * 0.18 : 0.025, 0.08);
+      rail.scale.y = THREE.MathUtils.lerp(rail.scale.y, active ? 0.72 + pulse * 0.42 : 0.5, 0.08);
+    });
+  });
+
+  return (
+    <group position={[width / 2 - (compact ? 0.12 : 0.16), -0.04, 0.09]} renderOrder={7}>
+      {Array.from({ length: count }).map((_, index) => {
+        const y = top - (railHeight / Math.max(1, count - 1)) * index;
+        const barHeight = compact ? 0.16 : 0.22;
+
+        return (
+          <mesh
+            key={`rail-${index}`}
+            position={[0, y, 0]}
+            ref={(node) => {
+              if (node) railRefs.current[index] = node;
+            }}
+          >
+            <boxGeometry args={[compact ? 0.018 : 0.024, barHeight, 0.012]} />
+            <meshBasicMaterial color={color} opacity={0.02} transparent blending={THREE.AdditiveBlending} depthWrite={false} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 function SectionGate({ activeScene, compact, curve, scrollProgress }) {
   const groupRef = useRef(null);
   const ringRefs = useRef([]);
@@ -446,34 +484,52 @@ function SectionGate({ activeScene, compact, curve, scrollProgress }) {
 
 function estimateTileLines(textItems, compact) {
   const wrapAt = compact ? 28 : 46;
-  return textItems.reduce((total, item) => total + Math.max(1, Math.ceil(item.length / wrapAt)), 0);
+  return textItems.reduce((total, item) => total + Math.max(1, Math.ceil(String(item ?? "").length / wrapAt)), 0);
 }
 
-function getTileMetrics({ body, compact, lines = [], scene, title }) {
+function readTypographyScale(value, fallback, min, max) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? THREE.MathUtils.clamp(numeric, min, max) : fallback;
+}
+
+function getTileTypography(typography = {}) {
+  return {
+    titleScale: readTypographyScale(typography.titleScale, 1, 0.75, 1.45),
+    bodyScale: readTypographyScale(typography.bodyScale, 1, 0.75, 1.55),
+    kickerScale: readTypographyScale(typography.kickerScale, 1, 0.75, 1.3),
+    lineHeightScale: readTypographyScale(typography.lineHeightScale, 1, 0.9, 1.25)
+  };
+}
+
+function getTileMetrics({ body, compact, lines = [], scene, title, typography }) {
   const isHero = scene === "hero";
-  const longTitle = title.length > 48 || title.includes("\n");
+  const { bodyScale } = getTileTypography(typography);
+  const safeTitle = String(title ?? "");
+  const longTitle = safeTitle.length > 48 || safeTitle.includes("\n");
   const estimatedLines = estimateTileLines([body, ...lines], compact);
   const dense = estimatedLines > (compact ? 8 : 9);
+  const heightScale = Math.max(0, bodyScale - 1) * (compact ? 0.16 : 0.26);
 
   return {
     dense,
-    height: compact ? (dense ? 2.96 : 2.24) : isHero ? 2.04 : dense ? 3.18 : 2.5,
+    height: compact ? (dense ? 2.96 : 2.24) + heightScale : isHero ? 2.04 : (dense ? 3.18 : 2.5) + heightScale,
     longTitle,
     scale: isHero ? 0.96 : compact ? 0.9 : 1.14,
     width: compact ? (dense ? 3.2 : 2.9) : isHero ? 3.4 : dense ? 4.74 : 4.02
   };
 }
 
-function ContentTile3D({ active, body, color, compact, href, icon, image, kicker, lines = [], navigate, position, scene, side = 1, title }) {
+function ContentTile3D({ active, body, color, compact, href, icon, image, kicker, lines = [], navigate, position, scene, side = 1, title, typography }) {
   const groupRef = useRef(null);
   const panelRef = useRef(null);
   const glowRef = useRef(null);
   const isHero = scene === "hero";
-  const { dense, height, longTitle, scale: activeScale, width } = getTileMetrics({ body, compact, lines, scene, title });
-  const titleSize = compact ? (longTitle ? 0.112 : 0.145) : isHero ? 0.17 : longTitle ? 0.158 : dense ? 0.205 : 0.235;
-  const bodySize = compact ? (dense ? 0.064 : 0.071) : dense ? 0.096 : 0.102;
-  const bodyLineHeight = compact ? 1.2 : 1.18;
-  const kickerSize = compact ? 0.074 : isHero ? 0.078 : dense ? 0.078 : 0.09;
+  const { bodyScale, kickerScale, lineHeightScale, titleScale } = getTileTypography(typography);
+  const { dense, height, longTitle, scale: activeScale, width } = getTileMetrics({ body, compact, lines, scene, title, typography });
+  const titleSize = (compact ? (longTitle ? 0.112 : 0.145) : isHero ? 0.17 : longTitle ? 0.158 : dense ? 0.205 : 0.235) * titleScale;
+  const bodySize = (compact ? (dense ? 0.064 : 0.071) : dense ? 0.096 : 0.102) * bodyScale;
+  const bodyLineHeight = (compact ? 1.2 : 1.18) * lineHeightScale;
+  const kickerSize = (compact ? 0.074 : isHero ? 0.078 : dense ? 0.078 : 0.09) * kickerScale;
   const bodyOffset = compact ? (dense ? 1.08 : longTitle ? 1.08 : 1) : dense ? 1.08 : longTitle ? 1.22 : 1.04;
   const bodyText = [body, ...lines].filter(Boolean).join("\n");
   const portX = position.x >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
@@ -481,7 +537,7 @@ function ContentTile3D({ active, body, color, compact, href, icon, image, kicker
   const logoReserve = hasIcon ? (compact ? 0.68 : 0.88) : 0;
   const titleTop = height / 2 - (compact ? 0.36 : 0.42);
   const bodyX = -width / 2 + 0.24;
-  const bodyMaxWidth = width - 0.56;
+  const bodyMaxWidth = width - (compact ? 0.78 : 0.86);
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
@@ -543,6 +599,7 @@ function ContentTile3D({ active, body, color, compact, href, icon, image, kicker
       <TilePhotoLayer active={active} height={height} image={image} width={width} />
       <TileReadabilityLayer active={active} height={height} width={width} />
       {hasIcon ? <TileLogoLayer active={active} color={color} compact={compact} icon={icon} titleTop={titleTop} width={width} /> : null}
+      <TileSignalRail active={active} color={color} compact={compact} height={height} lineCount={lines.length} width={width} />
       <mesh position={[portX, compact ? -0.04 : -0.06, 0.115]} renderOrder={7}>
         <boxGeometry args={[0.18, 0.072, 0.042]} />
         <meshBasicMaterial color={color} transparent opacity={active ? 0.62 : 0.16} blending={THREE.AdditiveBlending} depthWrite={false} />
@@ -652,6 +709,7 @@ function RunwayTiles({ activeScene, compact, curve, navigate, threeDContent }) {
               scene={scene}
               side={sceneOrder.indexOf(scene) % 2 === 0 ? 1 : -1}
               title={content.title}
+              typography={content.typography}
             />
           </group>
         );

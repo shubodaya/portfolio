@@ -59,6 +59,7 @@ export const defaultThreeDContent = {
       body: "Hands-on network and security support across the full incident lifecycle.",
       icon: "/assets/portfolio/serverblue.png",
       image: "/assets/portfolio/serverblue.png",
+      typography: { titleScale: 1.06, bodyScale: 1.18, kickerScale: 1, lineHeightScale: 1.04 },
       lines: [
         "• Firewall policy, NAT, ACL, and VPN diagnostics",
         "• Routing, switching, LAN, Wi-Fi, DNS, DHCP",
@@ -73,6 +74,7 @@ export const defaultThreeDContent = {
       body: "3 years of network, firewall, and IT support experience across enterprise and field environments.",
       icon: "/assets/portfolio/about-id-badge.png",
       image: "/assets/portfolio/story-security.png",
+      typography: { titleScale: 1.08, bodyScale: 1.12, kickerScale: 1, lineHeightScale: 1.03 },
       lines: [
         "• SonicWall: P1 to P3 firewall, VPN, SD-WAN, HA, routing",
         "• Itarmi IT Services: on-site and remote support records",
@@ -86,6 +88,7 @@ export const defaultThreeDContent = {
       body: "Network security labs focused on diagnostics and visibility.",
       icon: "/assets/portfolio/netravax.png",
       image: "/assets/portfolio/netravax.png",
+      typography: { titleScale: 1.08, bodyScale: 1.17, kickerScale: 1, lineHeightScale: 1.04 },
       lines: [
         "• Netravax: packet captures, logs, diagnostics exports",
         "• Network Lab: routing, switching, DNS, DHCP, AD, VPN",
@@ -99,6 +102,7 @@ export const defaultThreeDContent = {
       body: "Four dedicated pages presenting the same experience through different service lenses.",
       icon: "/assets/projects/site-network-browser.png",
       image: "/assets/projects/site-network-browser.png",
+      typography: { titleScale: 1.04, bodyScale: 1.14, kickerScale: 1, lineHeightScale: 1.03 },
       lines: [
         "• Network Support Engineer: routing, switching, DNS, DHCP",
         "• Security Operations Engineer: firewall, Sentinel, monitoring",
@@ -112,6 +116,7 @@ export const defaultThreeDContent = {
       body: "Technical writing that shows the reasoning behind support and security decisions.",
       icon: "/assets/projects/site-blog-browser.png",
       image: "/assets/projects/site-blog-browser.png",
+      typography: { titleScale: 1.05, bodyScale: 1.16, kickerScale: 1, lineHeightScale: 1.04 },
       lines: [
         "• Notes separate symptoms, logs, root cause, and follow-up",
         "• Diagnostics, monitoring, traffic analysis, automation",
@@ -125,6 +130,7 @@ export const defaultThreeDContent = {
       body: "Reference view for skills, labs, credentials, and education.",
       icon: "/assets/projects/site-security-browser.png",
       image: "/assets/projects/site-security-browser.png",
+      typography: { titleScale: 1, bodyScale: 1.14, kickerScale: 1, lineHeightScale: 1.04 },
       lines: [
         "• Firewall, VPN, networking, systems, cloud",
         "• Security tools, monitoring, scripting, automation",
@@ -138,6 +144,7 @@ export const defaultThreeDContent = {
       body: "Full CV covering role history, technical strengths, and certifications.",
       icon: "/assets/projects/hero-command.jpg",
       image: "/assets/projects/hero-command.jpg",
+      typography: { titleScale: 1.1, bodyScale: 1.18, kickerScale: 1, lineHeightScale: 1.04 },
       lines: [
         "• SonicWall: enterprise firewall, VPN, and routing support",
         "• Itarmi: field and remote support documentation",
@@ -151,6 +158,7 @@ export const defaultThreeDContent = {
       body: "Available for network security, IT support, and infrastructure support engagements.",
       icon: "/assets/favicon/apple-touch-icon.png",
       image: "/assets/portfolio/serverblue.png",
+      typography: { titleScale: 1.06, bodyScale: 1.16, kickerScale: 1, lineHeightScale: 1.04 },
       lines: [
         "• Firewall, VPN, troubleshooting, incident response",
         "• Remote, hybrid, and on-site support",
