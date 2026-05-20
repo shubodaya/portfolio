@@ -2379,13 +2379,13 @@ button {
   color: #f5cf78;
   cursor: pointer;
   display: flex;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   font-weight: 800;
   justify-content: space-between;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   min-height: 2.45rem;
   padding: 0.6rem 0.72rem;
-  text-transform: uppercase;
+  text-transform: none;
   width: 100%;
 }
 

@@ -122,59 +122,140 @@ const editableProjectKeys = [
   "links"
 ];
 
-const buildTreeGroups = (projectEditors) => [
-  {
-    id: "admin-tree-3d",
-    title: "3D page tree",
-    links: [
-      { id: "admin-3d-profile", label: "Profile and hero" },
-      { id: "admin-3d-sections", label: "Route sections" },
-      ...tileSectionIds.map((id) => ({ id: `admin-3d-tile-${id}`, label: `Tile: ${defaultThreeDContent.tiles[id]?.title ?? id}` }))
-    ]
-  },
-  {
-    id: "admin-tree-2d",
-    title: "2D page tree",
-    links: [
-      { id: "admin-2d-brand", label: "Brand and contact" },
-      {
-        id: "admin-2d-copy",
-        label: "Section copy",
-        children: sectionCopyGroups.map(([group, label]) => ({
-          id: `admin-2d-copy-${group}`,
-          label
-        }))
-      },
-      {
-        id: "admin-2d-home",
-        label: "Home content",
-        children: [
-          { id: "admin-2d-keywordMarquee", label: "Keyword marquee" },
-          ...contentGroups.map((group) => ({ id: `admin-2d-${group.key}`, label: group.title }))
-        ]
-      },
-      {
-        id: "admin-2d-projects",
-        label: "Project catalog",
-        children: [
-          { id: "admin-2d-featured", label: "Featured selector" },
-          ...projectEditors.map((project) => ({
-            id: `admin-2d-project-${project.slug}`,
-            label: project.title || project.slug
-          }))
-        ]
-      }
-    ]
-  }
-];
+const homepageProjectCategories = new Set([
+  "Network Security",
+  "Pentesting",
+  "Research and Systems"
+]);
 
-const defaultExpandedTree = {
-  "admin-tree-3d": true,
-  "admin-tree-2d": true,
-  "admin-2d-copy": false,
-  "admin-2d-home": false,
-  "admin-2d-projects": false
+const portfolioProjectCategory = "Portfolio Systems";
+
+const projectTreeLink = (project, prefix = "project") => ({
+  id: `admin-tree-${prefix}-${project.slug}`,
+  targetId: `admin-2d-project-${project.slug}`,
+  label: project.title || project.slug
+});
+
+const buildProjectBranch = (id, label, projects, prefix) => ({
+  id,
+  targetId: "admin-2d-projects",
+  label,
+  children: projects.map((project) => projectTreeLink(project, prefix))
+});
+
+const buildTreeGroups = (projectEditors) => {
+  const homepageProjects = projectEditors.filter(
+    (project) =>
+      project.featured &&
+      project.category !== portfolioProjectCategory &&
+      homepageProjectCategories.has(project.category)
+  );
+  const roleProjects = projectEditors.filter((project) => project.category === portfolioProjectCategory);
+
+  return [
+    {
+      id: "admin-tree-header",
+      title: "Header",
+      links: [
+        { id: "admin-tree-header-brand", targetId: "admin-2d-brand", label: "Site brand and contact links" },
+        { id: "admin-tree-header-hero-3d", targetId: "admin-3d-profile", label: "3D hero and profile" },
+        { id: "admin-tree-header-hero-copy", targetId: "admin-2d-copy-hero", label: "2D hero copy" },
+        { id: "admin-tree-header-stats", targetId: "admin-2d-heroStats", label: "Hero stats" },
+        { id: "admin-tree-header-marquee", targetId: "admin-2d-keywordMarquee", label: "Keyword marquee" },
+        { id: "admin-tree-header-nav", targetId: "admin-3d-sections", label: "Navigation labels and routes" }
+      ]
+    },
+    {
+      id: "admin-tree-services",
+      title: "Services",
+      links: [
+        { id: "admin-tree-services-3d", targetId: "admin-3d-tile-services", label: "3D animation tile" },
+        { id: "admin-tree-services-copy", targetId: "admin-2d-copy-overview", label: "Page intro copy" },
+        { id: "admin-tree-services-story", targetId: "admin-2d-storyTracks", label: "Service story panels" }
+      ]
+    },
+    {
+      id: "admin-tree-about",
+      title: "About",
+      links: [
+        { id: "admin-tree-about-3d", targetId: "admin-3d-tile-highlights", label: "3D animation tile" },
+        { id: "admin-tree-about-copy", targetId: "admin-2d-copy-highlights", label: "Page intro copy" },
+        { id: "admin-tree-about-services", targetId: "admin-2d-services", label: "Service cards" },
+        { id: "admin-tree-about-proof", targetId: "admin-2d-proofPoints", label: "Experience tiles" },
+        { id: "admin-tree-about-fit", targetId: "admin-2d-hiringReasons", label: "Role fit tiles" }
+      ]
+    },
+    {
+      id: "admin-tree-projects",
+      title: "Projects",
+      links: [
+        { id: "admin-tree-projects-3d", targetId: "admin-3d-tile-projects", label: "3D animation tile" },
+        { id: "admin-tree-projects-copy", targetId: "admin-2d-copy-projects", label: "Page intro copy" },
+        { id: "admin-tree-projects-featured", targetId: "admin-2d-featured", label: "Featured selector" },
+        buildProjectBranch("admin-tree-projects-cards", "Homepage project cards", homepageProjects, "homepage-project")
+      ]
+    },
+    {
+      id: "admin-tree-role-pages",
+      title: "Role Pages",
+      links: [
+        { id: "admin-tree-role-pages-3d", targetId: "admin-3d-tile-role-pages", label: "3D animation tile" },
+        { id: "admin-tree-role-pages-copy", targetId: "admin-2d-copy-portfolio", label: "Page intro copy" },
+        buildProjectBranch("admin-tree-role-pages-cards", "Role page cards", roleProjects, "role-project")
+      ]
+    },
+    {
+      id: "admin-tree-insights",
+      title: "Insights",
+      links: [
+        { id: "admin-tree-insights-3d", targetId: "admin-3d-tile-insights", label: "3D animation tile" },
+        { id: "admin-tree-insights-copy", targetId: "admin-2d-copy-insights", label: "Page intro copy" },
+        { id: "admin-tree-insights-notes", targetId: "admin-2d-blogNotes", label: "Writing notes" },
+        { id: "admin-tree-insights-testimonials", targetId: "admin-2d-testimonials", label: "Recommendations" }
+      ]
+    },
+    {
+      id: "admin-tree-contact",
+      title: "Contact",
+      links: [
+        { id: "admin-tree-contact-3d", targetId: "admin-3d-tile-contact", label: "3D animation tile" },
+        { id: "admin-tree-contact-copy", targetId: "admin-2d-copy-contact", label: "Page copy" },
+        { id: "admin-tree-contact-details", targetId: "admin-2d-brand", label: "Contact details and links" }
+      ]
+    },
+    {
+      id: "admin-tree-skills-catalog",
+      title: "Skills & Catalog",
+      links: [
+        { id: "admin-tree-catalog-3d", targetId: "admin-3d-tile-catalog", label: "3D animation tile" },
+        { id: "admin-tree-catalog-copy", targetId: "admin-2d-copy-catalog", label: "Catalog page copy" },
+        { id: "admin-tree-catalog-cta", targetId: "admin-2d-copy-catalogCta", label: "Catalog call to action" },
+        buildProjectBranch("admin-tree-catalog-projects", "Full project catalog", projectEditors, "catalog-project")
+      ]
+    },
+    {
+      id: "admin-tree-resume",
+      title: "Resume",
+      links: [
+        { id: "admin-tree-resume-3d", targetId: "admin-3d-tile-resume", label: "3D animation tile" },
+        { id: "admin-tree-resume-details", targetId: "admin-2d-brand", label: "Resume link and profile details" },
+        { id: "admin-tree-resume-hero", targetId: "admin-3d-profile", label: "3D resume/profile links" }
+      ]
+    },
+    {
+      id: "admin-tree-footer",
+      title: "Footer",
+      links: [
+        { id: "admin-tree-footer-copy", targetId: "admin-2d-copy-footer", label: "Footer labels" },
+        { id: "admin-tree-footer-services", targetId: "admin-2d-services", label: "Footer service list" },
+        { id: "admin-tree-footer-contact", targetId: "admin-2d-brand", label: "Footer contact links" },
+        { id: "admin-tree-footer-catalog", targetId: "admin-2d-projects", label: "Footer catalog categories" }
+      ]
+    }
+  ];
 };
+
+const defaultExpandedTree = {};
 
 const cloneProjectEditor = (project) => ({
   ...project,
@@ -401,33 +482,37 @@ const collectExpandableTreeIds = (groups) => {
 };
 
 function TreeLinks({ expandedTree, links, level = 0, toggleTree }) {
-  return links.map((section) => (
-    <div className="admin-tree__item" key={section.id}>
-      <div className="admin-tree__row">
-        {section.children ? (
-          <button
-            aria-controls={`${section.id}-children`}
-            aria-expanded={Boolean(expandedTree[section.id])}
-            className="admin-tree__toggle"
-            onClick={() => toggleTree(section.id)}
-            type="button"
-          >
-            {expandedTree[section.id] ? "-" : "+"}
-          </button>
-        ) : (
-          <span className="admin-tree__toggle-spacer" />
-        )}
-        <a className={`admin-sidebar__link${level > 0 ? " admin-sidebar__link--child" : ""}`} href={`#${section.id}`}>
-          {section.label}
-        </a>
-      </div>
-      {section.children && expandedTree[section.id] ? (
-        <div className="admin-tree__children" id={`${section.id}-children`}>
-          <TreeLinks expandedTree={expandedTree} links={section.children} level={level + 1} toggleTree={toggleTree} />
+  return links.map((section) => {
+    const targetId = section.targetId ?? section.id;
+
+    return (
+      <div className="admin-tree__item" key={section.id}>
+        <div className="admin-tree__row">
+          {section.children?.length ? (
+            <button
+              aria-controls={`${section.id}-children`}
+              aria-expanded={Boolean(expandedTree[section.id])}
+              className="admin-tree__toggle"
+              onClick={() => toggleTree(section.id)}
+              type="button"
+            >
+              {expandedTree[section.id] ? "-" : "+"}
+            </button>
+          ) : (
+            <span className="admin-tree__toggle-spacer" />
+          )}
+          <a className={`admin-sidebar__link${level > 0 ? " admin-sidebar__link--child" : ""}`} href={`#${targetId}`}>
+            {section.label}
+          </a>
         </div>
-      ) : null}
-    </div>
-  ));
+        {section.children?.length && expandedTree[section.id] ? (
+          <div className="admin-tree__children" id={`${section.id}-children`}>
+            <TreeLinks expandedTree={expandedTree} links={section.children} level={level + 1} toggleTree={toggleTree} />
+          </div>
+        ) : null}
+      </div>
+    );
+  });
 }
 
 function ThreeDTileEditor({ id, onChange, tile }) {
@@ -870,7 +955,7 @@ export function AdminPortal() {
         <form className="admin-workspace" onSubmit={handleSave}>
           <aside className="admin-sidebar">
             <div className="admin-sidebar__panel">
-              <p className="admin-console__eyebrow">Section tree</p>
+              <p className="admin-console__eyebrow">Page navigation</p>
               <div className="admin-tree__controls" aria-label="Section tree controls">
                 <button className="admin-tree__control" type="button" onClick={() => expandTree(true)}>
                   Expand all
@@ -879,11 +964,8 @@ export function AdminPortal() {
                   Collapse all
                 </button>
               </div>
-              <a className="admin-sidebar__link" href="#admin-publish">
-                Publish
-              </a>
               {adminTreeGroups.map((group) => (
-                <div className="admin-tree" key={group.title}>
+                <div className="admin-tree" key={group.id}>
                   <button
                     aria-controls={`${group.id}-children`}
                     aria-expanded={Boolean(expandedTree[group.id])}
@@ -917,7 +999,7 @@ export function AdminPortal() {
                   Reset to defaults
                 </button>
               </div>
-              <p className="admin-muted">Edits are grouped by the 3D page tree and the 2D page tree. No raw JSON editing is required.</p>
+              <p className="admin-muted">Edits are grouped by the same page sections shown in the site navigation, with nested controls for 3D tiles, 2D copy, cards, lists, projects, header, and footer content.</p>
               {contentError || contentMessage ? (
                 <div className={`admin-alert admin-alert--inline${contentError ? " admin-alert--error" : ""}`}>{contentError || contentMessage}</div>
               ) : null}
