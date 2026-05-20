@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { defaultThreeDContent, getMergedThreeDContent } from "../data/threeDContent";
 import { defaultSiteContent, getMergedSiteContent } from "./data/siteData";
 import { defaultProjects, getMergedProjects, projectCategories } from "./data/projectCatalog";
 import { fetchPublicSiteContent } from "./siteApi";
@@ -11,6 +12,7 @@ const SiteContentContext = createContext({
   configured: false,
   updatedAt: "",
   siteContent: defaultSiteContent,
+  threeDContent: defaultThreeDContent,
   projects: defaultProjects,
   projectCategories,
   applyServerContent: () => {},
@@ -20,12 +22,14 @@ const SiteContentContext = createContext({
 const normalizeContentPayload = (payload) => {
   const source = isRecord(payload?.content) ? payload.content : isRecord(payload) ? payload : {};
   const siteContent = isRecord(source.siteContent) ? source.siteContent : {};
+  const threeDContent = isRecord(source.threeDContent) ? source.threeDContent : {};
   const projectOverrides = isRecord(source.projectOverrides) ? source.projectOverrides : {};
 
   return {
     configured: Boolean(payload?.configured),
     updatedAt: typeof payload?.updatedAt === "string" ? payload.updatedAt : "",
     siteContent,
+    threeDContent,
     projectOverrides
   };
 };
@@ -74,6 +78,10 @@ export function SiteContentProvider({ children }) {
     () => getMergedSiteContent(remoteContent.siteContent),
     [remoteContent.siteContent]
   );
+  const threeDContent = useMemo(
+    () => getMergedThreeDContent(remoteContent.threeDContent),
+    [remoteContent.threeDContent]
+  );
   const projects = useMemo(
     () => getMergedProjects(remoteContent.projectOverrides),
     [remoteContent.projectOverrides]
@@ -85,6 +93,7 @@ export function SiteContentProvider({ children }) {
       configured: remoteContent.configured,
       updatedAt: remoteContent.updatedAt,
       siteContent,
+      threeDContent,
       projects,
       projectCategories,
       applyServerContent,
@@ -95,6 +104,7 @@ export function SiteContentProvider({ children }) {
       remoteContent.configured,
       remoteContent.updatedAt,
       siteContent,
+      threeDContent,
       projects,
       applyServerContent,
       refreshContent

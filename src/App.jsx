@@ -8,7 +8,7 @@ import Scene3D from "./components/Scene3D.jsx";
 import { ScrollExperience } from "./components/ScrollExperience.jsx";
 import { SmoothScroll } from "./components/SmoothScroll.jsx";
 import { profile } from "./data/profileData.js";
-import { SiteContentProvider } from "./twod/SiteContentContext.jsx";
+import { SiteContentProvider, useSiteContentData } from "./twod/SiteContentContext.jsx";
 import { TwoDPortfolio } from "./twod/TwoDPortfolio.jsx";
 
 function useActiveScene() {
@@ -36,7 +36,8 @@ function useActiveScene() {
   return activeScene;
 }
 
-function HomeExperience() {
+function HomeExperienceContent() {
+  const { threeDContent } = useSiteContentData();
   const { scrollYProgress } = useScroll();
   const [scrollProgress, setScrollProgress] = useState(0);
   const [introComplete, setIntroComplete] = useState(false);
@@ -57,9 +58,10 @@ function HomeExperience() {
         scrollProgress={scrollProgress}
         setActiveProject={setActiveProject}
         setHoveredScene={setHoveredScene}
+        threeDContent={threeDContent}
       />
 
-      <Nav activeScene={activeScene} onHoverScene={setHoveredScene} />
+      <Nav activeScene={activeScene} onHoverScene={setHoveredScene} routeNodes={threeDContent.sections} />
       <AnimatePresence>
         {!introComplete ? <LoaderIntro onComplete={completeIntro} /> : null}
       </AnimatePresence>
@@ -67,7 +69,10 @@ function HomeExperience() {
       <ScrollExperience
         activeProject={activeProject}
         activeScene={activeScene}
+        hero={threeDContent.hero}
         onHoverScene={setHoveredScene}
+        profile={threeDContent.profile}
+        routeNodes={threeDContent.sections}
         setActiveProject={setActiveProject}
       />
 
@@ -77,6 +82,14 @@ function HomeExperience() {
         a
       </Link>
     </div>
+  );
+}
+
+function HomeExperience() {
+  return (
+    <SiteContentProvider>
+      <HomeExperienceContent />
+    </SiteContentProvider>
   );
 }
 

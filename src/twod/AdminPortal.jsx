@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  cloneThreeDContent,
+  defaultThreeDContent,
+  getMergedThreeDContent,
+  tileSectionIds
+} from "../data/threeDContent";
 import { cloneSiteContent, defaultSiteContent, getMergedSiteContent } from "./data/siteData";
 import { defaultProjects, getMergedProjects } from "./data/projectCatalog";
 import { useSiteContentData } from "./SiteContentContext";
@@ -12,34 +18,114 @@ import {
   updateAdminSiteContent
 } from "./siteApi";
 
-const JSON_SECTIONS = [
-  { key: "heroStats", label: "Hero stats" },
-  { key: "keywordMarquee", label: "Keyword marquee" },
-  { key: "storyTracks", label: "Story tracks" },
-  { key: "services", label: "Services" },
-  { key: "proofPoints", label: "Experience tiles" },
-  { key: "hiringReasons", label: "Role fit tiles" },
-  { key: "blogNotes", label: "Writing notes" },
-  { key: "testimonials", label: "Testimonials" }
+const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+
+const treeGroups = [
+  {
+    title: "3D page tree",
+    links: [
+      { id: "admin-3d-profile", label: "Profile and hero" },
+      { id: "admin-3d-sections", label: "Route sections" },
+      ...tileSectionIds.map((id) => ({ id: `admin-3d-tile-${id}`, label: `Tile: ${defaultThreeDContent.tiles[id]?.title ?? id}` }))
+    ]
+  },
+  {
+    title: "2D page tree",
+    links: [
+      { id: "admin-2d-brand", label: "Brand and contact" },
+      { id: "admin-2d-copy", label: "Section copy" },
+      { id: "admin-2d-home", label: "Home content" },
+      { id: "admin-2d-featured", label: "Featured work" }
+    ]
+  }
 ];
 
-const ADMIN_SECTIONS = [
-  { id: "admin-publish", label: "Publish" },
-  { id: "admin-brand", label: "Brand and contact" },
-  { id: "admin-copy", label: "Section copy" },
-  { id: "admin-featured", label: "Featured work" },
-  { id: "admin-structured", label: "Structured content" },
-  { id: "admin-json", label: "Current JSON" }
+const sectionCopyGroups = [
+  ["brand", "Brand"],
+  ["hero", "Hero"],
+  ["overview", "Services overview"],
+  ["highlights", "Highlights"],
+  ["projects", "Projects"],
+  ["portfolio", "Role pages"],
+  ["insights", "Insights"],
+  ["contact", "Contact"],
+  ["catalog", "Catalog"],
+  ["catalogCta", "Catalog CTA"],
+  ["footer", "Footer"]
 ];
 
-const isRecord = (value) =>
-  value !== null && typeof value === "object" && !Array.isArray(value);
-
-const createJsonEditors = (content) =>
-  JSON_SECTIONS.reduce((accumulator, section) => {
-    accumulator[section.key] = JSON.stringify(content[section.key], null, 2);
-    return accumulator;
-  }, {});
+const contentGroups = [
+  {
+    key: "heroStats",
+    title: "Hero stats",
+    fields: [
+      { key: "value", label: "Value" },
+      { key: "label", label: "Label" }
+    ]
+  },
+  {
+    key: "storyTracks",
+    title: "Story tracks",
+    fields: [
+      { key: "id", label: "ID" },
+      { key: "eyebrow", label: "Eyebrow" },
+      { key: "title", label: "Title" },
+      { key: "description", label: "Description", multiline: true },
+      { key: "metric", label: "Metric", multiline: true },
+      { key: "image", label: "Image path" },
+      { key: "alt", label: "Alt text", multiline: true }
+    ],
+    listFields: [{ key: "outcomes", label: "Outcomes" }]
+  },
+  {
+    key: "services",
+    title: "Services",
+    fields: [
+      { key: "title", label: "Title" },
+      { key: "description", label: "Description", multiline: true }
+    ],
+    listFields: [{ key: "deliverables", label: "Deliverables" }]
+  },
+  {
+    key: "proofPoints",
+    title: "Experience tiles",
+    fields: [
+      { key: "metric", label: "Metric" },
+      { key: "title", label: "Title" },
+      { key: "detail", label: "Detail", multiline: true }
+    ],
+    listFields: [{ key: "tags", label: "Tags" }]
+  },
+  {
+    key: "hiringReasons",
+    title: "Role fit tiles",
+    fields: [
+      { key: "title", label: "Title" },
+      { key: "description", label: "Description", multiline: true }
+    ],
+    listFields: [{ key: "items", label: "Items" }]
+  },
+  {
+    key: "blogNotes",
+    title: "Writing notes",
+    fields: [
+      { key: "category", label: "Category" },
+      { key: "title", label: "Title" },
+      { key: "summary", label: "Summary", multiline: true },
+      { key: "link", label: "Link" },
+      { key: "linkLabel", label: "Link label" }
+    ]
+  },
+  {
+    key: "testimonials",
+    title: "Testimonials",
+    fields: [
+      { key: "quote", label: "Quote", multiline: true },
+      { key: "name", label: "Name" },
+      { key: "role", label: "Role" }
+    ]
+  }
+];
 
 const createProjectEditors = (projects) =>
   projects
@@ -66,24 +152,27 @@ const createProjectOverrides = (projects) =>
     return accumulator;
   }, {});
 
-const buildAdminContentPayload = (siteContent, projectEditors) => ({
+const buildAdminContentPayload = (siteContent, threeDContent, projectEditors) => ({
   siteContent,
+  threeDContent,
   projectOverrides: createProjectOverrides(projectEditors)
 });
 
 const normalizeAdminContentPayload = (payload) => {
   const source = isRecord(payload?.content) ? payload.content : isRecord(payload) ? payload : {};
   const siteContent = getMergedSiteContent(isRecord(source.siteContent) ? source.siteContent : {});
+  const threeDContent = getMergedThreeDContent(isRecord(source.threeDContent) ? source.threeDContent : {});
   const projectOverrides = isRecord(source.projectOverrides) ? source.projectOverrides : {};
 
   return {
     siteContent,
+    threeDContent,
     projectOverrides
   };
 };
 
-const updateByPath = (source, path, value) => {
-  const next = cloneSiteContent(source);
+const updateByPath = (source, path, value, clone) => {
+  const next = clone(source);
   let cursor = next;
 
   for (let index = 0; index < path.length - 1; index += 1) {
@@ -94,39 +183,164 @@ const updateByPath = (source, path, value) => {
   return next;
 };
 
-const sectionCopyFields = [
-  ["hero", "Eyebrow", "eyebrow"],
-  ["hero", "Title", "title"],
-  ["hero", "Lead paragraph", "lead"],
-  ["overview", "Overview eyebrow", "eyebrow"],
-  ["overview", "Overview title", "title"],
-  ["overview", "Overview paragraph", "body"],
-  ["highlights", "Highlights eyebrow", "eyebrow"],
-  ["highlights", "Highlights title", "title"],
-  ["highlights", "Highlights paragraph", "body"],
-  ["projects", "Projects eyebrow", "eyebrow"],
-  ["projects", "Projects title", "title"],
-  ["projects", "Projects paragraph", "body"],
-  ["portfolio", "Sites eyebrow", "eyebrow"],
-  ["portfolio", "Sites title", "title"],
-  ["portfolio", "Sites paragraph", "body"],
-  ["insights", "Insights eyebrow", "eyebrow"],
-  ["insights", "Insights title", "title"],
-  ["insights", "Insights paragraph", "body"],
-  ["contact", "Contact eyebrow", "eyebrow"],
-  ["contact", "Contact title", "title"],
-  ["contact", "Contact paragraph", "body"],
-  ["catalog", "Catalog eyebrow", "eyebrow"],
-  ["catalog", "Catalog title", "title"],
-  ["catalog", "Catalog paragraph", "body"],
-  ["catalogCta", "Catalog CTA eyebrow", "eyebrow"],
-  ["catalogCta", "Catalog CTA title", "title"],
-  ["catalogCta", "Catalog CTA paragraph", "body"],
-  ["footer", "Footer eyebrow", "eyebrow"],
-  ["footer", "Footer services title", "servicesTitle"],
-  ["footer", "Footer categories title", "categoriesTitle"],
-  ["footer", "Footer reach title", "reachTitle"]
-];
+const moveItem = (items, fromIndex, direction) => {
+  const toIndex = fromIndex + direction;
+  if (toIndex < 0 || toIndex >= items.length) return items;
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+};
+
+const emptyObjectFromFields = (fields, listFields = []) => {
+  const item = {};
+  fields.forEach((field) => {
+    item[field.key] = "";
+  });
+  listFields.forEach((field) => {
+    item[field.key] = [""];
+  });
+  return item;
+};
+
+function Field({ label, multiline = false, onChange, readOnly = false, type = "text", value }) {
+  return (
+    <label>
+      {label}
+      {multiline ? (
+        <textarea readOnly={readOnly} value={value ?? ""} onChange={(event) => onChange(event.target.value)} />
+      ) : (
+        <input readOnly={readOnly} type={type} value={value ?? ""} onChange={(event) => onChange(event.target.value)} />
+      )}
+    </label>
+  );
+}
+
+function StringListEditor({ addLabel = "Add item", items, label, onChange }) {
+  const list = Array.isArray(items) ? items : [];
+
+  return (
+    <div className="admin-list-editor">
+      <div className="admin-list-editor__head">
+        <span>{label}</span>
+        <button className="admin-btn admin-btn--ghost admin-btn--small" type="button" onClick={() => onChange([...list, ""])}>
+          {addLabel}
+        </button>
+      </div>
+      {list.map((item, index) => (
+        <div className="admin-list-row" key={`${label}-${index}`}>
+          <input
+            type="text"
+            value={item}
+            onChange={(event) => onChange(list.map((value, itemIndex) => (itemIndex === index ? event.target.value : value)))}
+          />
+          <button className="admin-btn admin-btn--ghost admin-btn--icon" type="button" onClick={() => onChange(moveItem(list, index, -1))}>
+            Up
+          </button>
+          <button className="admin-btn admin-btn--ghost admin-btn--icon" type="button" onClick={() => onChange(moveItem(list, index, 1))}>
+            Down
+          </button>
+          <button className="admin-btn admin-btn--danger admin-btn--icon" type="button" onClick={() => onChange(list.filter((_, itemIndex) => itemIndex !== index))}>
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StructuredListEditor({ allowAddRemove = true, allowReorder = true, fields, items, listFields = [], onChange, title }) {
+  const list = Array.isArray(items) ? items : [];
+
+  const updateItem = (index, key, value) => {
+    onChange(list.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)));
+  };
+
+  return (
+    <section className="admin-fieldset">
+      <div className="admin-fieldset__head">
+        <h3>{title}</h3>
+        {allowAddRemove ? (
+          <button
+            className="admin-btn admin-btn--ghost admin-btn--small"
+            type="button"
+            onClick={() => onChange([...list, emptyObjectFromFields(fields, listFields)])}
+          >
+            Add
+          </button>
+        ) : null}
+      </div>
+      <div className="admin-stack">
+        {list.map((item, index) => (
+          <article className="admin-repeat-card" key={`${title}-${index}`}>
+            <div className="admin-repeat-card__head">
+              <strong>{item.title || item.label || item.value || `${title} ${index + 1}`}</strong>
+              {allowReorder || allowAddRemove ? (
+                <div className="admin-actions admin-actions--compact">
+                  {allowReorder ? (
+                    <>
+                      <button className="admin-btn admin-btn--ghost admin-btn--small" type="button" onClick={() => onChange(moveItem(list, index, -1))}>
+                        Up
+                      </button>
+                      <button className="admin-btn admin-btn--ghost admin-btn--small" type="button" onClick={() => onChange(moveItem(list, index, 1))}>
+                        Down
+                      </button>
+                    </>
+                  ) : null}
+                  {allowAddRemove ? (
+                    <button className="admin-btn admin-btn--danger admin-btn--small" type="button" onClick={() => onChange(list.filter((_, itemIndex) => itemIndex !== index))}>
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="admin-form admin-form--two-col">
+              {fields.map((field) => (
+                <Field
+                  key={field.key}
+                  label={field.label}
+                  multiline={field.multiline}
+                  readOnly={field.readOnly}
+                  value={item[field.key]}
+                  onChange={(value) => updateItem(index, field.key, value)}
+                />
+              ))}
+            </div>
+            {listFields.map((field) => (
+              <StringListEditor
+                key={field.key}
+                label={field.label}
+                items={item[field.key]}
+                onChange={(value) => updateItem(index, field.key, value)}
+              />
+            ))}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ThreeDTileEditor({ id, onChange, tile }) {
+  const updateTile = (key, value) => {
+    onChange({ ...tile, [key]: value });
+  };
+
+  return (
+    <section className="admin-card" id={`admin-3d-tile-${id}`}>
+      <h2>3D tile: {tile.title || id}</h2>
+      <div className="admin-form admin-form--two-col">
+        <Field label="Kicker" value={tile.kicker} onChange={(value) => updateTile("kicker", value)} />
+        <Field label="Title" value={tile.title} onChange={(value) => updateTile("title", value)} />
+        <Field label="Tile logo path" value={tile.icon} onChange={(value) => updateTile("icon", value)} />
+        <Field label="Background image path" value={tile.image} onChange={(value) => updateTile("image", value)} />
+        <Field label="Body" multiline value={tile.body} onChange={(value) => updateTile("body", value)} />
+      </div>
+      <StringListEditor label="Tile lines" items={tile.lines} onChange={(value) => updateTile("lines", value)} />
+    </section>
+  );
+}
 
 export function AdminPortal() {
   const { applyServerContent } = useSiteContentData();
@@ -147,7 +361,7 @@ export function AdminPortal() {
     password: ""
   });
   const [draft, setDraft] = useState(() => cloneSiteContent(defaultSiteContent));
-  const [jsonEditors, setJsonEditors] = useState(() => createJsonEditors(defaultSiteContent));
+  const [threeDDraft, setThreeDDraft] = useState(() => cloneThreeDContent(defaultThreeDContent));
   const [projectEditors, setProjectEditors] = useState(() => createProjectEditors(defaultProjects));
   const [authBusy, setAuthBusy] = useState(false);
   const [contentBusy, setContentBusy] = useState(false);
@@ -157,27 +371,22 @@ export function AdminPortal() {
   const [contentMessage, setContentMessage] = useState("");
   const ownerExists = !session.setupRequired;
   const authenticated = session.authenticated;
-  const currentJsonPreview = useMemo(
-    () => JSON.stringify(buildAdminContentPayload(draft, projectEditors), null, 2),
-    [draft, projectEditors]
-  );
 
-  const syncDraft = (nextContent) => {
-    const cloned = cloneSiteContent(nextContent);
-    setDraft(cloned);
-    setJsonEditors(createJsonEditors(cloned));
+  const syncDraft = (nextContent, nextThreeDContent) => {
+    setDraft(cloneSiteContent(nextContent));
+    setThreeDDraft(cloneThreeDContent(nextThreeDContent));
   };
 
   const applySavedContent = (payload) => {
     const normalized = normalizeAdminContentPayload(payload);
     const mergedProjects = getMergedProjects(normalized.projectOverrides);
     const editors = createProjectEditors(mergedProjects);
-    syncDraft(normalized.siteContent);
+    syncDraft(normalized.siteContent, normalized.threeDContent);
     setProjectEditors(editors);
     applyServerContent({
       configured: Boolean(payload?.configured),
       updatedAt: typeof payload?.updatedAt === "string" ? payload.updatedAt : "",
-      content: buildAdminContentPayload(normalized.siteContent, editors)
+      content: buildAdminContentPayload(normalized.siteContent, normalized.threeDContent, editors)
     });
   };
 
@@ -192,9 +401,7 @@ export function AdminPortal() {
       try {
         const sessionPayload = await getAdminSession();
 
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         setSession({
           checked: true,
@@ -207,9 +414,7 @@ export function AdminPortal() {
         if (sessionPayload?.authenticated) {
           const contentPayload = await getAdminSiteContent();
 
-          if (cancelled) {
-            return;
-          }
+          if (cancelled) return;
 
           applySavedContent(contentPayload);
         }
@@ -219,11 +424,7 @@ export function AdminPortal() {
             ...current,
             checked: true
           }));
-          setAuthError(
-            error instanceof Error
-              ? error.message
-              : "Unable to load the shared admin session."
-          );
+          setAuthError(error instanceof Error ? error.message : "Unable to load the shared admin session.");
         }
       } finally {
         if (!cancelled) {
@@ -344,9 +545,7 @@ export function AdminPortal() {
   };
 
   const handleReloadSaved = async () => {
-    if (!authenticated) {
-      return;
-    }
+    if (!authenticated) return;
 
     setContentBusy(true);
     setContentError("");
@@ -368,24 +567,19 @@ export function AdminPortal() {
     setContentError("");
     setContentMessage("");
 
+    const nextDraft = getMergedSiteContent(draft);
+    const nextThreeDDraft = getMergedThreeDContent(threeDDraft);
+
+    if (!session.csrfToken) {
+      setContentError("Your admin session is missing a CSRF token. Please log in again.");
+      return;
+    }
+
+    setContentBusy(true);
+
     try {
-      let nextDraft = cloneSiteContent(draft);
-
-      JSON_SECTIONS.forEach((section) => {
-        const parsed = JSON.parse(jsonEditors[section.key]);
-        nextDraft[section.key] = parsed;
-      });
-
-      nextDraft = getMergedSiteContent(nextDraft);
-      if (!session.csrfToken) {
-        setContentError("Your admin session is missing a CSRF token. Please log in again.");
-        return;
-      }
-
-      setContentBusy(true);
-
       const response = await updateAdminSiteContent({
-        content: buildAdminContentPayload(nextDraft, projectEditors),
+        content: buildAdminContentPayload(nextDraft, nextThreeDDraft, projectEditors),
         csrfToken: session.csrfToken
       });
 
@@ -399,18 +593,18 @@ export function AdminPortal() {
   };
 
   const handleResetDefaults = () => {
-    syncDraft(defaultSiteContent);
+    syncDraft(defaultSiteContent, defaultThreeDContent);
     setProjectEditors(createProjectEditors(defaultProjects));
     setContentError("");
     setContentMessage("Editor reset to the default portfolio content. Save to publish it.");
   };
 
-  const updateSectionCopy = (group, field, value) => {
-    setDraft((current) => updateByPath(current, ["sectionCopy", group, field], value));
+  const updateSite = (path, value) => {
+    setDraft((current) => updateByPath(current, path, value, cloneSiteContent));
   };
 
-  const updateContact = (path, value) => {
-    setDraft((current) => updateByPath(current, ["contact", ...path], value));
+  const updateThreeD = (path, value) => {
+    setThreeDDraft((current) => updateByPath(current, path, value, cloneThreeDContent));
   };
 
   return (
@@ -425,12 +619,7 @@ export function AdminPortal() {
             Open site
           </Link>
           {authenticated ? (
-            <button
-              className="admin-btn admin-btn--danger"
-              type="button"
-              onClick={handleLogout}
-              disabled={authBusy}
-            >
+            <button className="admin-btn admin-btn--danger" type="button" onClick={handleLogout} disabled={authBusy}>
               Log out
             </button>
           ) : null}
@@ -440,100 +629,38 @@ export function AdminPortal() {
       {!session.checked ? (
         <div className="admin-card admin-card--auth">
           <h2>Loading admin</h2>
-          <p className="admin-muted">
-            Checking the shared owner account and loading the current saved content.
-          </p>
+          <p className="admin-muted">Checking the shared owner account and loading the current saved content.</p>
         </div>
       ) : null}
 
       {session.checked && !ownerExists ? (
         <div className="admin-card admin-card--auth">
           <h2>Create owner login</h2>
-          <p className="admin-muted">
-            This creates the single shared owner account for the live portfolio backend.
-          </p>
+          <p className="admin-muted">This creates the single shared owner account for the live portfolio backend.</p>
           <form className="admin-form" onSubmit={handleSetup}>
-            <label>
-              Owner email
-              <input
-                type="email"
-                value={setupForm.email}
-                onChange={(event) =>
-                  setSetupForm((current) => ({ ...current, email: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                value={setupForm.password}
-                onChange={(event) =>
-                  setSetupForm((current) => ({ ...current, password: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Confirm password
-              <input
-                type="password"
-                value={setupForm.confirmPassword}
-                onChange={(event) =>
-                  setSetupForm((current) => ({
-                    ...current,
-                    confirmPassword: event.target.value
-                  }))
-                }
-              />
-            </label>
+            <Field label="Owner email" type="email" value={setupForm.email} onChange={(value) => setSetupForm((current) => ({ ...current, email: value }))} />
+            <Field label="Password" type="password" value={setupForm.password} onChange={(value) => setSetupForm((current) => ({ ...current, password: value }))} />
+            <Field label="Confirm password" type="password" value={setupForm.confirmPassword} onChange={(value) => setSetupForm((current) => ({ ...current, confirmPassword: value }))} />
             <button className="admin-btn admin-btn--primary" type="submit" disabled={authBusy}>
               {authBusy ? "Creating..." : "Create owner"}
             </button>
           </form>
-          {authError || authMessage ? (
-            <div className={`admin-alert${authError ? " admin-alert--error" : ""}`}>
-              {authError || authMessage}
-            </div>
-          ) : null}
+          {authError || authMessage ? <div className={`admin-alert${authError ? " admin-alert--error" : ""}`}>{authError || authMessage}</div> : null}
         </div>
       ) : null}
 
       {session.checked && ownerExists && !authenticated ? (
         <div className="admin-card admin-card--auth">
           <h2>Owner login</h2>
-          <p className="admin-muted">
-            Use the shared owner account to edit and publish portfolio content from any browser.
-          </p>
+          <p className="admin-muted">Use the shared owner account to edit and publish portfolio content from any browser.</p>
           <form className="admin-form" onSubmit={handleLogin}>
-            <label>
-              Email
-              <input
-                type="email"
-                value={loginForm.email}
-                onChange={(event) =>
-                  setLoginForm((current) => ({ ...current, email: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                value={loginForm.password}
-                onChange={(event) =>
-                  setLoginForm((current) => ({ ...current, password: event.target.value }))
-                }
-              />
-            </label>
+            <Field label="Email" type="email" value={loginForm.email} onChange={(value) => setLoginForm((current) => ({ ...current, email: value }))} />
+            <Field label="Password" type="password" value={loginForm.password} onChange={(value) => setLoginForm((current) => ({ ...current, password: value }))} />
             <button className="admin-btn admin-btn--primary" type="submit" disabled={authBusy}>
               {authBusy ? "Signing in..." : "Sign in"}
             </button>
           </form>
-          {authError || authMessage ? (
-            <div className={`admin-alert${authError ? " admin-alert--error" : ""}`}>
-              {authError || authMessage}
-            </div>
-          ) : null}
+          {authError || authMessage ? <div className={`admin-alert${authError ? " admin-alert--error" : ""}`}>{authError || authMessage}</div> : null}
         </div>
       ) : null}
 
@@ -541,14 +668,22 @@ export function AdminPortal() {
         <form className="admin-workspace" onSubmit={handleSave}>
           <aside className="admin-sidebar">
             <div className="admin-sidebar__panel">
-              <p className="admin-console__eyebrow">Sections</p>
-              <nav className="admin-sidebar__nav" aria-label="Admin sections">
-                {ADMIN_SECTIONS.map((section) => (
-                  <a className="admin-sidebar__link" href={`#${section.id}`} key={section.id}>
-                    {section.label}
-                  </a>
-                ))}
-              </nav>
+              <p className="admin-console__eyebrow">Section tree</p>
+              <a className="admin-sidebar__link" href="#admin-publish">
+                Publish
+              </a>
+              {treeGroups.map((group) => (
+                <div className="admin-tree" key={group.title}>
+                  <strong>{group.title}</strong>
+                  <nav className="admin-sidebar__nav" aria-label={group.title}>
+                    {group.links.map((section) => (
+                      <a className="admin-sidebar__link" href={`#${section.id}`} key={section.id}>
+                        {section.label}
+                      </a>
+                    ))}
+                  </nav>
+                </div>
+              ))}
             </div>
           </aside>
 
@@ -558,179 +693,134 @@ export function AdminPortal() {
                 <button className="admin-btn admin-btn--primary" type="submit" disabled={contentBusy}>
                   {contentBusy ? "Saving..." : "Save content"}
                 </button>
-                <button
-                  className="admin-btn admin-btn--ghost"
-                  type="button"
-                  onClick={handleReloadSaved}
-                  disabled={contentBusy}
-                >
+                <button className="admin-btn admin-btn--ghost" type="button" onClick={handleReloadSaved} disabled={contentBusy}>
                   Reload saved
                 </button>
-                <button
-                  className="admin-btn admin-btn--ghost"
-                  type="button"
-                  onClick={handleResetDefaults}
-                  disabled={contentBusy}
-                >
+                <button className="admin-btn admin-btn--ghost" type="button" onClick={handleResetDefaults} disabled={contentBusy}>
                   Reset to defaults
                 </button>
               </div>
-              <p className="admin-muted">
-                The editor writes to the shared backend, so the saved content is the same across devices and browsers.
-              </p>
+              <p className="admin-muted">Edits are grouped by the 3D page tree and the 2D page tree. No raw JSON editing is required.</p>
               {contentError || contentMessage ? (
-                <div
-                  className={`admin-alert admin-alert--inline${contentError ? " admin-alert--error" : ""}`}
-                >
-                  {contentError || contentMessage}
-                </div>
+                <div className={`admin-alert admin-alert--inline${contentError ? " admin-alert--error" : ""}`}>{contentError || contentMessage}</div>
               ) : null}
             </section>
 
-            <section className="admin-card" id="admin-brand">
-              <h2>Brand and contact</h2>
+            <section className="admin-card" id="admin-3d-profile">
+              <h2>3D profile and hero</h2>
               <div className="admin-form admin-form--two-col">
-                <label>
-                  Name
-                  <input
-                    type="text"
-                    value={draft.contact.name}
-                    onChange={(event) => updateContact(["name"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  Title
-                  <input
-                    type="text"
-                    value={draft.contact.title}
-                    onChange={(event) => updateContact(["title"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  Subtitle
-                  <input
-                    type="text"
-                    value={draft.contact.subtitle}
-                    onChange={(event) => updateContact(["subtitle"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  Location
-                  <input
-                    type="text"
-                    value={draft.contact.location}
-                    onChange={(event) => updateContact(["location"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  Availability
-                  <input
-                    type="text"
-                    value={draft.contact.availability}
-                    onChange={(event) => updateContact(["availability"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  Email
-                  <input
-                    type="email"
-                    value={draft.contact.email}
-                    onChange={(event) => updateContact(["email"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  Phone
-                  <input
-                    type="text"
-                    value={draft.contact.phone}
-                    onChange={(event) => updateContact(["phone"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  Resume link
-                  <input
-                    type="url"
-                    value={draft.contact.links.resume}
-                    onChange={(event) => updateContact(["links", "resume"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  LinkedIn link
-                  <input
-                    type="url"
-                    value={draft.contact.links.linkedin}
-                    onChange={(event) => updateContact(["links", "linkedin"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  GitHub link
-                  <input
-                    type="url"
-                    value={draft.contact.links.github}
-                    onChange={(event) => updateContact(["links", "github"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  Blog link
-                  <input
-                    type="url"
-                    value={draft.contact.links.blog}
-                    onChange={(event) => updateContact(["links", "blog"], event.target.value)}
-                  />
-                </label>
-                <label>
-                  YouTube link
-                  <input
-                    type="url"
-                    value={draft.contact.links.youtube}
-                    onChange={(event) => updateContact(["links", "youtube"], event.target.value)}
-                  />
-                </label>
-                <label className="admin-form__full">
-                  Summary
-                  <textarea
-                    value={draft.contact.summary}
-                    onChange={(event) => updateContact(["summary"], event.target.value)}
-                  />
-                </label>
+                <Field label="Name" value={threeDDraft.profile.name} onChange={(value) => updateThreeD(["profile", "name"], value)} />
+                <Field label="Title" value={threeDDraft.profile.title} onChange={(value) => updateThreeD(["profile", "title"], value)} />
+                <Field label="Subtitle" multiline value={threeDDraft.profile.subtitle} onChange={(value) => updateThreeD(["profile", "subtitle"], value)} />
+                <Field label="Availability" value={threeDDraft.profile.availability} onChange={(value) => updateThreeD(["profile", "availability"], value)} />
+                <Field label="Email" type="email" value={threeDDraft.profile.email} onChange={(value) => updateThreeD(["profile", "email"], value)} />
+                <Field label="Phone" value={threeDDraft.profile.phone} onChange={(value) => updateThreeD(["profile", "phone"], value)} />
+                <Field label="Resume link" value={threeDDraft.profile.links.resume} onChange={(value) => updateThreeD(["profile", "links", "resume"], value)} />
+                <Field label="LinkedIn link" value={threeDDraft.profile.links.linkedin} onChange={(value) => updateThreeD(["profile", "links", "linkedin"], value)} />
+                <Field label="GitHub link" value={threeDDraft.profile.links.github} onChange={(value) => updateThreeD(["profile", "links", "github"], value)} />
+                <Field label="Blog link" value={threeDDraft.profile.links.blog} onChange={(value) => updateThreeD(["profile", "links", "blog"], value)} />
+                <Field label="Hero kicker" value={threeDDraft.hero.kicker} onChange={(value) => updateThreeD(["hero", "kicker"], value)} />
+                <Field label="Hero body" multiline value={threeDDraft.hero.body} onChange={(value) => updateThreeD(["hero", "body"], value)} />
+                <Field label="Services button" value={threeDDraft.hero.servicesLabel} onChange={(value) => updateThreeD(["hero", "servicesLabel"], value)} />
+                <Field label="Projects button" value={threeDDraft.hero.projectsLabel} onChange={(value) => updateThreeD(["hero", "projectsLabel"], value)} />
+                <Field label="Contact button" value={threeDDraft.hero.contactLabel} onChange={(value) => updateThreeD(["hero", "contactLabel"], value)} />
+                <Field label="Resume button" value={threeDDraft.hero.resumeLabel} onChange={(value) => updateThreeD(["hero", "resumeLabel"], value)} />
+              </div>
+              <StringListEditor label="Hero title lines" items={threeDDraft.hero.titleLines} onChange={(value) => updateThreeD(["hero", "titleLines"], value)} />
+            </section>
+
+            <section className="admin-card" id="admin-3d-sections">
+              <h2>3D route sections</h2>
+              <StructuredListEditor
+                title="Navigation and scroll sections"
+                items={threeDDraft.sections}
+                onChange={(value) => updateThreeD(["sections"], value)}
+                allowAddRemove={false}
+                allowReorder={false}
+                fields={[
+                  { key: "id", label: "Section ID", readOnly: true },
+                  { key: "label", label: "Label" },
+                  { key: "short", label: "Short nav" },
+                  { key: "signal", label: "Signal" },
+                  { key: "path", label: "Route/path" },
+                  { key: "summary", label: "Hidden section summary", multiline: true }
+                ]}
+              />
+            </section>
+
+            {tileSectionIds.map((id) => (
+              <ThreeDTileEditor
+                id={id}
+                key={id}
+                tile={threeDDraft.tiles[id] ?? defaultThreeDContent.tiles[id]}
+                onChange={(value) => updateThreeD(["tiles", id], value)}
+              />
+            ))}
+
+            <section className="admin-card" id="admin-2d-brand">
+              <h2>2D brand and contact</h2>
+              <div className="admin-form admin-form--two-col">
+                <Field label="Name" value={draft.contact.name} onChange={(value) => updateSite(["contact", "name"], value)} />
+                <Field label="Title" value={draft.contact.title} onChange={(value) => updateSite(["contact", "title"], value)} />
+                <Field label="Subtitle" value={draft.contact.subtitle} onChange={(value) => updateSite(["contact", "subtitle"], value)} />
+                <Field label="Location" value={draft.contact.location} onChange={(value) => updateSite(["contact", "location"], value)} />
+                <Field label="Availability" value={draft.contact.availability} onChange={(value) => updateSite(["contact", "availability"], value)} />
+                <Field label="Email" type="email" value={draft.contact.email} onChange={(value) => updateSite(["contact", "email"], value)} />
+                <Field label="Phone" value={draft.contact.phone} onChange={(value) => updateSite(["contact", "phone"], value)} />
+                <Field label="Resume link" value={draft.contact.links.resume} onChange={(value) => updateSite(["contact", "links", "resume"], value)} />
+                <Field label="LinkedIn link" value={draft.contact.links.linkedin} onChange={(value) => updateSite(["contact", "links", "linkedin"], value)} />
+                <Field label="GitHub link" value={draft.contact.links.github} onChange={(value) => updateSite(["contact", "links", "github"], value)} />
+                <Field label="Blog link" value={draft.contact.links.blog} onChange={(value) => updateSite(["contact", "links", "blog"], value)} />
+                <Field label="YouTube link" value={draft.contact.links.youtube} onChange={(value) => updateSite(["contact", "links", "youtube"], value)} />
+                <Field label="Summary" multiline value={draft.contact.summary} onChange={(value) => updateSite(["contact", "summary"], value)} />
               </div>
             </section>
 
-            <section className="admin-card" id="admin-copy">
-              <h2>Section copy</h2>
-              <div className="admin-form admin-form--two-col">
-                {sectionCopyFields.map(([group, label, field]) => (
-                  <label
-                    className={field === "title" || field === "body" || field === "lead" ? "admin-form__full" : ""}
-                    key={`${group}-${field}-${label}`}
-                  >
-                    {label}
-                    {field === "body" || field === "lead" || field === "title" ? (
-                      <textarea
-                        value={draft.sectionCopy[group][field]}
-                        onChange={(event) =>
-                          updateSectionCopy(group, field, event.target.value)
-                        }
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={draft.sectionCopy[group][field]}
-                        onChange={(event) =>
-                          updateSectionCopy(group, field, event.target.value)
-                        }
-                      />
-                    )}
-                  </label>
+            <section className="admin-card" id="admin-2d-copy">
+              <h2>2D section copy</h2>
+              <div className="admin-stack">
+                {sectionCopyGroups.map(([group, label]) => (
+                  <section className="admin-fieldset" key={group}>
+                    <h3>{label}</h3>
+                    <div className="admin-form admin-form--two-col">
+                      {Object.keys(draft.sectionCopy[group]).map((field) => (
+                        <Field
+                          key={`${group}-${field}`}
+                          label={field}
+                          multiline={["body", "lead", "title"].includes(field)}
+                          value={draft.sectionCopy[group][field]}
+                          onChange={(value) => updateSite(["sectionCopy", group, field], value)}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </section>
 
-            <section className="admin-card" id="admin-featured">
-              <h2>Featured work</h2>
-              <p className="admin-muted">
-                Choose which projects appear in the landing-page featured section.
-              </p>
+            <section className="admin-card" id="admin-2d-home">
+              <h2>2D home content</h2>
+              <div className="admin-stack">
+                <section className="admin-fieldset">
+                  <h3>Keyword marquee</h3>
+                  <StringListEditor label="Keywords" items={draft.keywordMarquee} onChange={(value) => updateSite(["keywordMarquee"], value)} />
+                </section>
+                {contentGroups.map((group) => (
+                  <StructuredListEditor
+                    key={group.key}
+                    title={group.title}
+                    fields={group.fields}
+                    listFields={group.listFields}
+                    items={draft[group.key]}
+                    onChange={(value) => updateSite([group.key], value)}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <section className="admin-card" id="admin-2d-featured">
+              <h2>2D featured work</h2>
+              <p className="admin-muted">Choose which projects appear in the landing-page featured section.</p>
               <div className="admin-project-grid">
                 {projectEditors.map((project) => (
                   <label className="admin-project-toggle" key={project.slug}>
@@ -739,11 +829,7 @@ export function AdminPortal() {
                       checked={project.featured}
                       onChange={(event) =>
                         setProjectEditors((current) =>
-                          current.map((item) =>
-                            item.slug === project.slug
-                              ? { ...item, featured: event.target.checked }
-                              : item
-                          )
+                          current.map((item) => (item.slug === project.slug ? { ...item, featured: event.target.checked } : item))
                         )
                       }
                     />
@@ -754,35 +840,6 @@ export function AdminPortal() {
                   </label>
                 ))}
               </div>
-            </section>
-
-            <section className="admin-card" id="admin-structured">
-              <h2>Structured content</h2>
-              <div className="admin-editor-grid">
-                {JSON_SECTIONS.map((section) => (
-                  <label className="admin-editor" key={section.key}>
-                    <span>{section.label}</span>
-                    <textarea
-                      className="admin-json"
-                      value={jsonEditors[section.key]}
-                      onChange={(event) =>
-                        setJsonEditors((current) => ({
-                          ...current,
-                          [section.key]: event.target.value
-                        }))
-                      }
-                    />
-                  </label>
-                ))}
-              </div>
-            </section>
-
-            <section className="admin-card" id="admin-json">
-              <h2>Current JSON</h2>
-              <p className="admin-muted">
-                This is the content snapshot that will be used the next time the portfolio reloads.
-              </p>
-              <textarea className="admin-json admin-json--readonly" value={currentJsonPreview} readOnly />
             </section>
           </div>
         </form>

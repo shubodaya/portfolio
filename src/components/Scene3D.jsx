@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
 import { profile, sceneOrder } from "../data/profileData.js";
+import { defaultThreeDContent } from "../data/threeDContent.js";
 import { FibreCable, SECTION_STOPS, createFibreCurve, getCurvePoint, getSceneIndex } from "./FibreCable.jsx";
 import { PacketLights } from "./PacketLights.jsx";
 import { SMark3D } from "./SMark3D.jsx";
@@ -29,7 +30,7 @@ const sectionColors = {
   outro: COLORS.mint
 };
 
-const tileImages = {
+const defaultTileImages = {
   hero: "/assets/portfolio/serverblue.png",
   services: "/assets/portfolio/serverblue.png",
   highlights: "/assets/portfolio/story-security.png",
@@ -51,6 +52,11 @@ const tileLinks = {
   contact: "/contact",
   catalog: "/catalog",
   resume: profile.links.resume
+};
+
+const getSectionRoute = (threeDContent, scene) => {
+  if (scene === "resume") return threeDContent.profile?.links?.resume ?? profile.links.resume;
+  return threeDContent.sections?.find((section) => section.id === scene)?.path ?? tileLinks[scene];
 };
 
 function useDisplayPrefs() {
@@ -357,6 +363,35 @@ function TilePhotoLayer({ active, height, image, width }) {
   );
 }
 
+function TileLogoLayer({ active, color, compact, icon, titleTop, width }) {
+  const texture = useTexture(icon);
+  const logoWidth = compact ? 0.56 : 0.72;
+  const logoHeight = compact ? 0.36 : 0.48;
+  const x = -width / 2 + 0.18 + logoWidth / 2;
+  const y = titleTop - logoHeight / 2 + (compact ? 0.01 : 0.02);
+
+  useEffect(() => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    texture.needsUpdate = true;
+  }, [texture]);
+
+  return (
+    <group position={[x, y, 0.095]} renderOrder={8}>
+      <RoundedBox args={[logoWidth + 0.04, logoHeight + 0.04, 0.026]} radius={0.035} smoothness={5}>
+        <meshBasicMaterial color="#061014" opacity={active ? 0.66 : 0.28} transparent depthWrite={false} />
+      </RoundedBox>
+      <mesh position={[0, 0, 0.018]}>
+        <planeGeometry args={[logoWidth, logoHeight]} />
+        <meshBasicMaterial map={texture} opacity={active ? 0.86 : 0.38} transparent depthWrite={false} />
+      </mesh>
+      <RoundedBox args={[logoWidth + 0.075, logoHeight + 0.075, 0.016]} position={[0, 0, -0.015]} radius={0.045} smoothness={5}>
+        <meshBasicMaterial color={color} transparent opacity={active ? 0.1 : 0.03} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </RoundedBox>
+    </group>
+  );
+}
+
 function SectionGate({ activeScene, compact, curve, scrollProgress }) {
   const groupRef = useRef(null);
   const ringRefs = useRef([]);
@@ -421,7 +456,7 @@ function getTileMetrics({ body, compact, lines = [], scene, title }) {
   };
 }
 
-function ContentTile3D({ active, body, color, compact, href, image, kicker, lines = [], navigate, position, scene, side = 1, title }) {
+function ContentTile3D({ active, body, color, compact, href, icon, image, kicker, lines = [], navigate, position, scene, side = 1, title }) {
   const groupRef = useRef(null);
   const panelRef = useRef(null);
   const glowRef = useRef(null);
@@ -434,6 +469,9 @@ function ContentTile3D({ active, body, color, compact, href, image, kicker, line
   const bodyOffset = compact ? (dense ? 0.88 : longTitle ? 1.02 : 0.92) : dense ? 0.82 : longTitle ? 1.15 : 0.96;
   const bodyText = [body, ...lines].filter(Boolean).join("\n");
   const portX = position.x >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
+  const hasIcon = Boolean(icon);
+  const logoReserve = hasIcon ? (compact ? 0.68 : 0.88) : 0;
+  const titleTop = height / 2 - (compact ? 0.36 : 0.42);
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
@@ -493,6 +531,7 @@ function ContentTile3D({ active, body, color, compact, href, image, kicker, line
         <meshBasicMaterial color={color} transparent opacity={0.05} blending={THREE.AdditiveBlending} depthWrite={false} />
       </RoundedBox>
       <TilePhotoLayer active={active} height={height} image={image} width={width} />
+      {hasIcon ? <TileLogoLayer active={active} color={color} compact={compact} icon={icon} titleTop={titleTop} width={width} /> : null}
       <mesh position={[portX, compact ? -0.04 : -0.06, 0.115]} renderOrder={7}>
         <boxGeometry args={[0.18, 0.072, 0.042]} />
         <meshBasicMaterial color={color} transparent opacity={active ? 0.62 : 0.16} blending={THREE.AdditiveBlending} depthWrite={false} />
@@ -517,8 +556,8 @@ function ContentTile3D({ active, body, color, compact, href, image, kicker, line
         fontWeight={800}
         lineHeight={0.96}
         material-depthTest={false}
-        maxWidth={width - 0.34}
-        position={[-width / 2 + 0.18, height / 2 - (compact ? 0.36 : 0.42), 0.07]}
+        maxWidth={width - 0.34 - logoReserve}
+        position={[-width / 2 + 0.18 + logoReserve, titleTop, 0.07]}
         renderOrder={6}
       >
         {title}
@@ -553,103 +592,12 @@ function ContentTile3D({ active, body, color, compact, href, image, kicker, line
   );
 }
 
-function makeTileContent() {
-  return {
-    services: {
-      kicker: "01 / SERVICES",
-      title: "SERVICES",
-      body: "Hands-on network and security support across the full incident lifecycle.",
-      lines: [
-        "\u2022 Firewall policy, NAT, ACL, and VPN diagnostics",
-        "\u2022 Routing, switching, LAN, Wi-Fi, DNS, DHCP",
-        "\u2022 Packet captures, log review, escalation notes",
-        "\u2022 Monitoring, SLA closure, and handover notes",
-        "\u2022 Microsoft 365, Entra ID, Azure, support scripts"
-      ]
-    },
-    highlights: {
-      kicker: "02 / ABOUT",
-      title: "ABOUT",
-      body: "3 years of network, firewall, and IT support experience across enterprise and field environments.",
-      lines: [
-        "\u2022 SonicWall: P1 to P3 firewall, VPN, SD-WAN, HA, routing",
-        "\u2022 Itarmi IT Services: on-site and remote support records",
-        "\u2022 MSc Cybersecurity with Distinction from an NCSC-certified programme",
-        "\u2022 CCNA, Network+, Security+, AZ-900, ISC2 CC, Google IT Automation"
-      ]
-    },
-    projects: {
-      kicker: "03 / PROJECTS",
-      title: "PROJECTS",
-      body: "Network security labs focused on diagnostics and visibility.",
-      lines: [
-        "\u2022 Netravax: packet captures, logs, diagnostics exports",
-        "\u2022 Network Lab: routing, switching, DNS, DHCP, AD, VPN",
-        "\u2022 Home SOC: Sentinel, KQL, authentication analysis",
-        "\u2022 WAF, IDS, and automotive security research"
-      ]
-    },
-    "role-pages": {
-      kicker: "04 / ROLE PAGES",
-      title: "ROLE PAGES",
-      body: "Four dedicated pages presenting the same experience through different service lenses.",
-      lines: [
-        "\u2022 Network Support Engineer: routing, switching, DNS, DHCP",
-        "\u2022 Security Operations Engineer: firewall, Sentinel, monitoring",
-        "\u2022 IT Support Engineer: Microsoft 365, Entra ID, device setup",
-        "\u2022 Network Security Notes: lab notes and support decisions"
-      ]
-    },
-    insights: {
-      kicker: "05 / INSIGHTS",
-      title: "INSIGHTS",
-      body: "Technical writing that shows the reasoning behind support and security decisions.",
-      lines: [
-        "\u2022 Notes separate symptoms, logs, root cause, and follow-up",
-        "\u2022 Diagnostics, monitoring, traffic analysis, automation",
-        "\u2022 Net-Kit: one operator workspace for support notes",
-        "\u2022 IDS write-up: traffic classification and model evaluation"
-      ]
-    },
-    contact: {
-      kicker: "06 / CONTACT",
-      title: "CONTACT",
-      body: "Available for network security, IT support, and infrastructure support engagements.",
-      lines: [
-        "\u2022 Firewall, VPN, troubleshooting, incident response",
-        "\u2022 Remote, hybrid, and on-site support",
-        `\u2022 Email: ${profile.email}`,
-        `\u2022 Phone: ${profile.phone}`,
-        "\u2022 LinkedIn, GitHub, and portfolio links on contact page"
-      ]
-    },
-    catalog: {
-      kicker: "07 / SKILLS & CATALOG",
-      title: "SKILLS & CATALOG",
-      body: "Reference view for skills, labs, credentials, and education.",
-      lines: [
-        "\u2022 Firewall, VPN, networking, systems, cloud",
-        "\u2022 Security tools, monitoring, scripting, automation",
-        "\u2022 Labs across diagnostics, SOC, IDS, and research",
-        "\u2022 Certifications and MSc Cybersecurity with Distinction"
-      ]
-    },
-    resume: {
-      kicker: "08 / RESUME",
-      title: "RESUME",
-      body: "Full CV covering role history, technical strengths, and certifications.",
-      lines: [
-        "\u2022 SonicWall: enterprise firewall, VPN, and routing support",
-        "\u2022 Itarmi: field and remote support documentation",
-        "\u2022 Firewall policy, packet capture, SLA, mentoring",
-        "\u2022 Direct CV download link included"
-      ]
-    }
-  };
+function makeTileContent(threeDContent) {
+  return threeDContent.tiles ?? defaultThreeDContent.tiles;
 }
 
-function RunwayTiles({ activeProject, activeScene, compact, curve, navigate }) {
-  const tileContent = useMemo(() => makeTileContent(activeProject), [activeProject]);
+function RunwayTiles({ activeScene, compact, curve, navigate, threeDContent }) {
+  const tileContent = useMemo(() => makeTileContent(threeDContent), [threeDContent]);
   const positions = useMemo(() => {
     return Object.fromEntries(sceneOrder.map((scene) => [scene, vectorFrom(getCurvePoint(curve, scene), tileOffsetFor(scene, compact))]));
   }, [compact, curve]);
@@ -660,8 +608,11 @@ function RunwayTiles({ activeProject, activeScene, compact, curve, navigate }) {
         if (scene === "hero" || scene === "outro") return null;
         const active = activeScene === scene;
         const visible = active;
-        const content = tileContent[scene];
+        const content = tileContent[scene] ?? defaultThreeDContent.tiles[scene];
+        if (!content) return null;
         const color = sectionColors[scene] ?? COLORS.mint;
+        const href = getSectionRoute(threeDContent, scene);
+        const image = content.image || defaultTileImages[scene];
 
         return (
           <group key={scene} visible={visible}>
@@ -680,10 +631,11 @@ function RunwayTiles({ activeProject, activeScene, compact, curve, navigate }) {
               body={content.body}
               color={color}
               compact={compact}
-              href={tileLinks[scene]}
+              href={href}
+              icon={content.icon}
               kicker={content.kicker}
               lines={content.lines}
-              image={tileImages[scene]}
+              image={image}
               navigate={navigate}
               position={positions[scene]}
               scene={scene}
@@ -719,7 +671,7 @@ function SceneLights({ activeScene, curve }) {
   );
 }
 
-function SecurityWorld({ activeProject, activeScene, compact, navigate, scrollProgress }) {
+function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDContent }) {
   const curve = useMemo(() => createFibreCurve(compact), [compact]);
   const heroSPoint = useMemo(() => new THREE.Vector3(0, compact ? 0.76 : 0.82, 5.72), [compact]);
   const showHeroS = activeScene === "hero";
@@ -736,7 +688,7 @@ function SecurityWorld({ activeProject, activeScene, compact, navigate, scrollPr
       <FibreCable activeScene={activeScene} curve={curve} scrollProgress={scrollProgress} />
       <SectionGate activeScene={activeScene} compact={compact} curve={curve} scrollProgress={scrollProgress} />
       <PacketLights count={compact ? 3 : 6} curve={curve} scrollProgress={scrollProgress} />
-      <RunwayTiles activeProject={activeProject} activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} />
+      <RunwayTiles activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} threeDContent={threeDContent} />
       <ContactOutroS activeScene={activeScene} compact={compact} curve={curve} scrollProgress={scrollProgress} />
       <EffectComposer multisampling={0}>
         <Bloom intensity={compact ? 0.24 : 0.36} luminanceThreshold={0.16} mipmapBlur radius={compact ? 0.24 : 0.34} />
@@ -755,7 +707,7 @@ function StaticFallback() {
   );
 }
 
-export default function Scene3D({ activeProject, activeScene, scrollProgress }) {
+export default function Scene3D({ activeScene, scrollProgress, threeDContent = defaultThreeDContent }) {
   const { compact, reduceMotion } = useDisplayPrefs();
   const navigate = useNavigate();
 
@@ -775,7 +727,7 @@ export default function Scene3D({ activeProject, activeScene, scrollProgress }) 
         gl.outputColorSpace = THREE.SRGBColorSpace;
       }}
     >
-      <SecurityWorld activeProject={activeProject} activeScene={activeScene} compact={compact} navigate={navigate} scrollProgress={scrollProgress} />
+      <SecurityWorld activeScene={activeScene} compact={compact} navigate={navigate} scrollProgress={scrollProgress} threeDContent={threeDContent} />
     </Canvas>
   );
 }

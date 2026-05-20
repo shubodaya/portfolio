@@ -20,7 +20,7 @@ for (const viewport of viewports) {
     page.on("pageerror", (error) => pageErrors.push(error.message));
 
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.goto(baseUrl, { waitUntil: "networkidle" });
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("canvas", { timeout: 15000 });
     await page.waitForTimeout(1800);
     await page.screenshot({ path: `artifacts/${viewport.name}.png`, fullPage: false });

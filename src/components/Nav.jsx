@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { routeNodes } from "../data/profileData.js";
 
-export function Nav({ activeScene, onHoverScene }) {
+export function Nav({ activeScene, onHoverScene, routeNodes: nodes = routeNodes }) {
   const navRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -36,7 +36,7 @@ export function Nav({ activeScene, onHoverScene }) {
         <span>S</span>
       </Link>
       <nav aria-label="Portfolio route" id="portfolio-mobile-nav" ref={navRef}>
-        {routeNodes.map((node) => {
+        {nodes.map((node) => {
           const commonProps = {
             onBlur: () => onHoverScene?.(null),
             onFocus: () => onHoverScene?.(node.id),

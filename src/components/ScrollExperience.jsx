@@ -2,14 +2,6 @@ import { Hero } from "./Hero.jsx";
 import { profile, routeNodes } from "../data/profileData.js";
 import { ContactGlyph } from "../twod/components/ContactGlyph.jsx";
 
-const outroLinks = [
-  { label: "Email", href: `mailto:${profile.email}`, kind: "email" },
-  { label: "LinkedIn", href: profile.links.linkedin, kind: "linkedin" },
-  { label: "GitHub", href: profile.links.github, kind: "github" },
-  { label: "Blog", href: profile.links.blog, kind: "blog" },
-  { label: "Resume", href: profile.links.resume, kind: "resume" }
-];
-
 export function SceneSection({ align = "left", children, id, kicker, title }) {
   return (
     <section className={`story-section story-section--${align}`} data-scene-section id={id}>
@@ -22,11 +14,19 @@ export function SceneSection({ align = "left", children, id, kicker, title }) {
   );
 }
 
-export function ScrollExperience() {
+export function ScrollExperience({ hero, profile: profileContent = profile, routeNodes: nodes = routeNodes }) {
+  const outroLinks = [
+    { label: "Email", href: `mailto:${profileContent.email}`, kind: "email" },
+    { label: "LinkedIn", href: profileContent.links.linkedin, kind: "linkedin" },
+    { label: "GitHub", href: profileContent.links.github, kind: "github" },
+    { label: "Blog", href: profileContent.links.blog, kind: "blog" },
+    { label: "Resume", href: profileContent.links.resume, kind: "resume" }
+  ];
+
   return (
     <main className="scroll-experience">
-      <Hero />
-      {routeNodes.map((node, index) => (
+      <Hero hero={hero} profile={profileContent} />
+      {nodes.map((node, index) => (
         <SceneSection
           id={node.id}
           key={node.id}
