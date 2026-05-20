@@ -156,8 +156,8 @@ export function HomePage() {
 
   const categoryHref =
     activeCategory === "All"
-      ? "/projects"
-      : `/projects?category=${encodeURIComponent(activeCategory)}`;
+      ? "/catalog"
+      : `/catalog?category=${encodeURIComponent(activeCategory)}`;
   const activePortfolio =
     portfolioSystems.find((portfolio) => portfolio.slug === activePortfolioSlug) ??
     portfolioSystems[0];
@@ -212,10 +212,10 @@ export function HomePage() {
 
             <div className="hero__actions">
               <a className="button" href="#projects">
-                Review focus areas
+                View projects
               </a>
-              <Link className="button button--secondary" to="/projects">
-                Open evidence catalog
+              <Link className="button button--secondary" to="/catalog">
+                Browse projects catalog
               </Link>
               <a
                 className="button button--ghost"
@@ -415,7 +415,7 @@ export function HomePage() {
 
         <div className="section__actions" data-reveal>
           <Link className="button" to={categoryHref}>
-            Open evidence catalog
+            Browse projects catalog
           </Link>
         </div>
       </section>
@@ -447,7 +447,7 @@ export function HomePage() {
                     >
                       {portfolio.links[0]?.label ?? "Open site"}
                     </a>
-                    <Link to="/projects?category=Portfolio%20Systems">See role pages</Link>
+                    <Link to="/catalog?category=Portfolio%20Systems">See role pages</Link>
                   </div>
                 </div>
               </article>
@@ -481,7 +481,7 @@ export function HomePage() {
                   >
                     {portfolio.links[0]?.label ?? "Open site"}
                   </a>
-                  <Link to="/projects?category=Portfolio%20Systems">See role pages</Link>
+                  <Link to="/catalog?category=Portfolio%20Systems">See role pages</Link>
                 </div>
               </article>
             ))}

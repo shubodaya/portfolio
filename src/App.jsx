@@ -1,292 +1,127 @@
-import { useEffect, useState } from "react";
-import {
-  BrowserRouter,
-  Link,
-  NavLink,
-  Navigate,
-  Route,
-  Routes,
-  useLocation
-} from "react-router-dom";
-import { HomePage } from "./pages/HomePage";
-import { ProjectsPage } from "./pages/ProjectsPage";
-import { AdminPortal } from "./AdminPortal";
-import { useSiteContentData, SiteContentProvider } from "./SiteContentContext";
-import { ContactGlyph } from "./components/ContactGlyph";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, useMotionValueEvent, useScroll } from "framer-motion";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { AdminPortal } from "./twod/AdminPortal.jsx";
+import { LoaderIntro } from "./components/LoaderIntro.jsx";
+import { Nav } from "./components/Nav.jsx";
+import Scene3D from "./components/Scene3D.jsx";
+import { ScrollExperience } from "./components/ScrollExperience.jsx";
+import { SmoothScroll } from "./components/SmoothScroll.jsx";
+import { profile } from "./data/profileData.js";
+import { SiteContentProvider } from "./twod/SiteContentContext.jsx";
+import { TwoDPortfolio } from "./twod/TwoDPortfolio.jsx";
 
-function ScrollManager() {
-  const location = useLocation();
+function useActiveScene() {
+  const [activeScene, setActiveScene] = useState("hero");
 
   useEffect(() => {
-    const scrollTarget = () => {
-      if (location.hash) {
-        const node = document.getElementById(location.hash.slice(1));
-        if (node) {
-          node.scrollIntoView({ behavior: "smooth", block: "start" });
-          return;
+    const sections = Array.from(document.querySelectorAll("[data-scene-section]"));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+        if (visible?.target.id) {
+          setActiveScene(visible.target.id);
         }
-      }
-
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    };
-
-    window.requestAnimationFrame(scrollTarget);
-  }, [location.pathname, location.hash]);
-
-  return null;
-}
-
-function SectionLink({ sectionId, label, onClick }) {
-  const location = useLocation();
-
-  if (location.pathname === "/") {
-    return (
-      <a href={`#${sectionId}`} onClick={onClick}>
-        {label}
-      </a>
+      },
+      { threshold: [0.22, 0.42, 0.62], rootMargin: "-18% 0px -22% 0px" }
     );
-  }
 
-  return (
-    <Link to={{ pathname: "/", hash: `#${sectionId}` }} onClick={onClick}>
-      {label}
-    </Link>
-  );
-}
-
-function Header() {
-  const location = useLocation();
-  const { siteContent } = useSiteContentData();
-  const { contact } = siteContent;
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 24);
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
   }, []);
 
+  return activeScene;
+}
+
+function HomeExperience() {
+  const { scrollYProgress } = useScroll();
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [introComplete, setIntroComplete] = useState(false);
+  const [hoveredScene, setHoveredScene] = useState(null);
+  const [activeProject, setActiveProject] = useState("netravax");
+  const activeScene = useActiveScene();
+  const completeIntro = useCallback(() => setIntroComplete(true), []);
+
+  useMotionValueEvent(scrollYProgress, "change", setScrollProgress);
+
+  return (
+    <div className={`webgl-portfolio ${introComplete ? "is-live" : "is-booting"}`} data-active-scene={activeScene}>
+      <SmoothScroll />
+      <Scene3D
+        activeProject={activeProject}
+        activeScene={activeScene}
+        hoveredScene={hoveredScene}
+        scrollProgress={scrollProgress}
+        setActiveProject={setActiveProject}
+        setHoveredScene={setHoveredScene}
+      />
+
+      <Nav activeScene={activeScene} onHoverScene={setHoveredScene} />
+      <AnimatePresence>
+        {!introComplete ? <LoaderIntro onComplete={completeIntro} /> : null}
+      </AnimatePresence>
+
+      <ScrollExperience
+        activeProject={activeProject}
+        activeScene={activeScene}
+        onHoverScene={setHoveredScene}
+        setActiveProject={setActiveProject}
+      />
+
+      <div className="webgl-vignette" aria-hidden="true" />
+      <div className="webgl-scanlines" aria-hidden="true" />
+      <Link className="admin-stealth-entry" to="/admin" aria-label="Owner admin login" title="Owner login">
+        a
+      </Link>
+    </div>
+  );
+}
+
+function AdminExperience() {
+  return (
+    <SiteContentProvider>
+      <div className="twod-clone">
+        <AdminPortal />
+      </div>
+    </SiteContentProvider>
+  );
+}
+
+function ResumeRedirect() {
   useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname, location.hash]);
-
-  const sectionLinks = [
-    { sectionId: "services", label: "Services" },
-    { sectionId: "highlights", label: "Highlights" },
-    { sectionId: "projects", label: "Evidence" },
-    { sectionId: "portfolio-system", label: "Role Pages" },
-    { sectionId: "insights", label: "Insights" },
-    { sectionId: "contact", label: "Contact" }
-  ];
+    window.location.replace(profile.links.resume);
+  }, []);
 
   return (
-    <header className={`site-header ${scrolled ? "is-scrolled" : ""}`}>
-      <div className="site-header__inner">
-        <Link className="site-brand" to="/">
-          <span className="site-brand__mark" aria-hidden="true">
-            <img src="/assets/favicon/apple-touch-icon.png" alt="" />
-          </span>
-          <span className="site-brand__copy">
-            <strong>{contact.name}</strong>
-            <span>{contact.subtitle}</span>
-          </span>
-        </Link>
-
-        <button
-          className="site-header__menu"
-          type="button"
-          onClick={() => setMenuOpen((current) => !current)}
-          aria-expanded={menuOpen}
-          aria-label="Toggle navigation"
-        >
-          Menu
-        </button>
-
-        <nav className={`site-nav ${menuOpen ? "is-open" : ""}`}>
-          {sectionLinks.map((item) => (
-            <SectionLink
-              key={item.sectionId}
-              sectionId={item.sectionId}
-              label={item.label}
-              onClick={() => setMenuOpen(false)}
-            />
-          ))}
-          <NavLink
-            className={({ isActive }) =>
-              `site-nav__link site-nav__link--catalog ${isActive ? "is-active" : ""}`
-            }
-            to="/projects"
-          >
-            Catalog
-          </NavLink>
-          <a
-            className="button button--small"
-            href={contact.links.resume}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Resume
-          </a>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
-function Footer() {
-  const { siteContent, projectCategories } = useSiteContentData();
-  const { contact, sectionCopy, services } = siteContent;
-  const footerCategories = projectCategories.filter((category) =>
-    ["Network Security", "Pentesting", "Research and Systems", "Portfolio Systems"].includes(
-      category
-    )
-  );
-  const reachLinks = [
-    {
-      href: `mailto:${contact.email}`,
-      label: "Send email",
-      shortLabel: "Email",
-      kind: "email"
-    },
-    {
-      href: `tel:${contact.phone.replace(/\s+/g, "")}`,
-      label: "Call phone",
-      shortLabel: "Call",
-      kind: "phone"
-    },
-    {
-      href: contact.links.linkedin,
-      label: "Open LinkedIn",
-      shortLabel: "LinkedIn",
-      kind: "linkedin"
-    },
-    {
-      href: contact.links.github,
-      label: "Open GitHub",
-      shortLabel: "GitHub",
-      kind: "github"
-    },
-    {
-      href: contact.links.blog,
-      label: "Open blog",
-      shortLabel: "Blog",
-      kind: "blog"
-    },
-    {
-      href: contact.links.resume,
-      label: "Open resume",
-      shortLabel: "Resume",
-      kind: "resume"
-    }
-  ];
-
-  return (
-    <footer className="site-footer">
-      <div className="site-footer__grid">
-        <div className="site-footer__block">
-          <p className="eyebrow">{sectionCopy.footer.eyebrow}</p>
-          <h2>{contact.name}</h2>
-          <p className="site-footer__summary">{contact.summary}</p>
-        </div>
-
-        <div className="site-footer__block">
-          <h3>{sectionCopy.footer.servicesTitle}</h3>
-          <ul className="footer-list">
-            {services.map((service) => (
-              <li key={service.title}>{service.title}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="site-footer__block">
-          <h3>{sectionCopy.footer.categoriesTitle}</h3>
-          <ul className="footer-list">
-            {footerCategories.map((category) => (
-              <li key={category}>
-                <Link to={`/projects?category=${encodeURIComponent(category)}`}>
-                  {category}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="site-footer__block">
-          <h3>{sectionCopy.footer.reachTitle}</h3>
-          <div className="footer-link-row" aria-label="Footer contact links">
-            {reachLinks.map((item) => (
-              <a
-                className="footer-link"
-                href={item.href}
-                key={item.label}
-                target={item.href.startsWith("http") ? "_blank" : undefined}
-                rel={item.href.startsWith("http") ? "noreferrer" : undefined}
-                aria-label={item.label}
-                title={item.label}
-              >
-                <span className="footer-link__icon" aria-hidden="true">
-                  <ContactGlyph kind={item.kind} />
-                </span>
-                <span className="footer-link__label">{item.shortLabel}</span>
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="site-footer__bottom">
-        <span>{new Date().getFullYear()} {contact.name}</span>
-        <a href="#top">Back to top</a>
-      </div>
-    </footer>
-  );
-}
-
-function AppShell() {
-  const location = useLocation();
-  const isAdminRoute = location.pathname === "/admin";
-
-  return (
-    <div className="site-shell">
-      {isAdminRoute ? null : <Header />}
-      <main>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/admin" element={<AdminPortal />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      {isAdminRoute ? null : <Footer />}
-      {isAdminRoute ? null : (
-        <Link
-          className="admin-stealth-entry"
-          to="/admin"
-          aria-label="Owner admin login"
-          title="Owner login"
-        >
-          A
-        </Link>
-      )}
+    <div className="resume-redirect">
+      <a href={profile.links.resume}>Open Resume</a>
     </div>
   );
 }
 
 export default function App() {
   return (
-    <SiteContentProvider>
-      <BrowserRouter>
-        <ScrollManager />
-        <AppShell />
-      </BrowserRouter>
-    </SiteContentProvider>
+    <Routes>
+      <Route element={<HomeExperience />} path="/" />
+      <Route element={<TwoDPortfolio sectionId="services" />} path="/services" />
+      <Route element={<TwoDPortfolio sectionId="highlights" />} path="/highlights" />
+      <Route element={<TwoDPortfolio sectionId="projects" />} path="/featured-projects" />
+      <Route element={<TwoDPortfolio sectionId="portfolio-system" />} path="/role-pages" />
+      <Route element={<TwoDPortfolio sectionId="insights" />} path="/insights" />
+      <Route element={<TwoDPortfolio sectionId="contact" />} path="/contact" />
+      <Route element={<TwoDPortfolio mode="catalog" />} path="/catalog" />
+      <Route element={<TwoDPortfolio mode="catalog" />} path="/projects" />
+      <Route element={<ResumeRedirect />} path="/resume" />
+      <Route element={<TwoDPortfolio sectionId="services" />} path="/about" />
+      <Route element={<TwoDPortfolio sectionId="highlights" />} path="/experience" />
+      <Route element={<TwoDPortfolio mode="catalog" />} path="/skills" />
+      <Route element={<TwoDPortfolio mode="catalog" />} path="/certifications" />
+      <Route element={<TwoDPortfolio mode="catalog" />} path="/education" />
+      <Route element={<AdminExperience />} path="/admin" />
+      <Route element={<Navigate replace to="/" />} path="*" />
+    </Routes>
   );
 }

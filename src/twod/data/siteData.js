@@ -34,56 +34,56 @@ export const defaultSiteContent = {
       eyebrow: "Portfolio"
     },
     hero: {
-      eyebrow: "Network Security / IT Network Support",
+      eyebrow: "Network Security | IT Infrastructure & Security",
       title: "Network Security Engineer",
       lead:
-        "I help keep networks, users, and systems secure, connected, and reliable through troubleshooting, monitoring, firewall/VPN support, and practical automation."
+        "I protect businesses from network failures, security gaps, and downtime. Hands-on firewall management, VPN support, incident response, and smart automation."
     },
     overview: {
       eyebrow: "What this page shows",
-      title: "Network Security Engineer focused on secure, reliable infrastructure.",
-      body:
-        "My work is centred on firewall troubleshooting, VPN support, LAN and Wi-Fi connectivity, TCP/IP fundamentals, DNS/DHCP, monitoring, incident resolution, endpoint protection, and clear support documentation."
+      title:
+        "I help organisations build secure, resilient networks. Firewall troubleshooting, VPN fault isolation, endpoint protection, cloud identity, and incident documentation that gets reused.",
+      body: ""
     },
     highlights: {
       eyebrow: "Support and operations",
-      title: "Network and IT support capabilities.",
-      body:
-        "The focus is practical operational support: restore service, reduce risk, document the fix, and keep users and systems working within SLA expectations."
+      title:
+        "Practical network and IT support for businesses that need fast, reliable resolution of connectivity, security, and infrastructure problems.",
+      body: ""
     },
     projects: {
-      eyebrow: "Featured evidence",
+      eyebrow: "Projects",
       title: "Network Security Focus Areas",
       body:
-        "Selected labs and case-study work that support network security, infrastructure troubleshooting, defensive monitoring, and practical IT operations."
+        "Selected labs and project work that support network security, infrastructure troubleshooting, defensive monitoring, and practical IT operations."
     },
     portfolio: {
-      eyebrow: "Role evidence",
-      title: "Focused pages for network, security, and IT support roles.",
-      body:
-        "These pages keep the same evidence focused on the roles I am targeting: network operations, defensive security, and service-oriented IT support."
+      eyebrow: "Role pages",
+      title:
+        "Dedicated pages for each service area. The same experience presented through network support, security operations, and IT support.",
+      body: ""
     },
     insights: {
       eyebrow: "Notes and references",
-      title: "Writing that explains security and support decisions.",
-      body:
-        "The written work shows how I reason through troubleshooting, visibility, hardening, and operational follow-up, while references show how I work under support pressure."
+      title:
+        "Written work that shows how I think. Troubleshooting decisions, security reasoning, and operational follow-up, alongside references from people I have worked with directly.",
+      body: ""
     },
     contact: {
       eyebrow: "Contact",
-      title: "Ready to support secure, reliable infrastructure.",
+      title: "Ready to support your network and security operations.",
       body:
-        "I am looking for UK network security, IT network support, and infrastructure support roles where clear troubleshooting, documentation, and service ownership matter."
+        "If you need someone who can hit the ground running on firewall issues, VPN faults, incidents, or IT support, with clear documentation and service ownership from day one, get in touch."
     },
     catalog: {
-      eyebrow: "Evidence catalog",
-      title: "Network, security, support, and research evidence.",
+      eyebrow: "Skills & Catalog",
+      title: "Network, security, support, and research projects.",
       body:
-        "This page collects the technical labs, network-security work, support evidence, research projects, and selected automation examples behind the landing page."
+        "This page collects technical labs, network-security work, support projects, research, and selected automation examples behind the landing page."
     },
     catalogCta: {
       eyebrow: "Next move",
-      title: "Ready to connect the evidence back to a network or IT support role?",
+      title: "Ready to discuss the right support path?",
       body:
         "The landing page gives the focused version. The catalog backs it up with labs, notes, and supporting technical work."
     },
@@ -97,13 +97,13 @@ export const defaultSiteContent = {
   contact: {
     name: "Shubodaya Kumar",
     title: "Network Security Engineer",
-    subtitle: "Network Security Engineer / IT Network Support",
-    location: "Plymouth, England",
-    availability: "Open to entry-level and junior Network Security Engineer / IT Network Support roles in the UK",
+    subtitle: "Network Security Engineer | IT Infrastructure & Security",
+    location: "Remote & On-Site | UK-Based",
+    availability: "Available for network security, IT infrastructure, and technical support engagements",
     email: "contact@shubodaya.dev",
     phone: "+44 7436301739",
     summary:
-      "I support secure, reliable infrastructure across firewalls, VPNs, LAN/Wi-Fi, DNS/DHCP, monitoring, Microsoft 365, Entra ID, Azure basics, endpoint protection, and IT operations documentation.",
+      "Network Security Engineer helping businesses stay secure and connected. Firewall management, VPN support, incident response, endpoint protection, and IT operations that are properly documented and repeatable.",
     links: {
       resume:
         "https://docs.google.com/document/d/1_7zbqMzdl_wmW-mcFGJstg1HRwJrlj0dzo48k6ReFBg/edit?usp=sharing",
@@ -115,20 +115,20 @@ export const defaultSiteContent = {
   },
   heroStats: [
     {
-      value: "3+ years",
-      label: "network, firewall, and IT support experience"
+      value: "3+ Years",
+      label: "Network, Firewall & IT Support Experience"
     },
     {
       value: "1,800+",
-      label: "annual P1-P3 firewall, VPN, SD-WAN, HA, and routing cases"
+      label: "Critical Incidents Handled Annually"
     },
     {
       value: "25+",
-      label: "UK on-site and remote support incidents resolved"
+      label: "UK On-Site & Remote Resolutions"
     },
     {
-      value: "6+ certs",
-      label: "networking, cloud, and security credentials"
+      value: "6+ Certifications",
+      label: "Networking, Cloud & Security"
     }
   ],
   keywordMarquee: [
@@ -152,10 +152,10 @@ export const defaultSiteContent = {
     {
       id: "networks",
       eyebrow: "Track 01",
-      title: "Secure, reliable connectivity",
+      title: "Network & Connectivity",
       description:
-        "I work through routing, switching, LAN/Wi-Fi, firewall, VPN, TCP/IP, DNS, and DHCP issues with a support mindset built around uptime and user impact.",
-      metric: "25+ on-site and remote incidents resolved in current UK support work",
+        "When connectivity breaks, business stops. I diagnose and resolve routing, switching, firewall, VPN, DNS, and DHCP issues quickly. Clear handover notes ensure nothing gets lost between shifts or teams.",
+      metric: "25+ on-site and remote incidents resolved across live customer environments",
       image: "/assets/01_Infrastructure_that_202604132237.png",
       alt: "Infrastructure-focused visual for resilient network and platform delivery.",
       outcomes: [
@@ -169,10 +169,10 @@ export const defaultSiteContent = {
     {
       id: "security",
       eyebrow: "Track 02",
-      title: "Monitoring and incident resolution",
+      title: "Incident Response & Monitoring",
       description:
-        "I connect alerts, logs, packet evidence, and user reports into practical triage so incidents can be understood, escalated, documented, and closed properly.",
-      metric: "From SonicWall cases to Sentinel labs and network intrusion-detection research",
+        "I turn noisy alerts and fragmented logs into clear incident timelines. I handle firewall, VPN, SD-WAN, and routing cases from first alert to documented closure, with SLA and service restoration always front of mind.",
+      metric: "From P1-P3 SonicWall cases to Microsoft Sentinel labs and traffic analysis",
       image: "/assets/02_Security_work_202604142136.png",
       alt: "Security-focused visual for threat validation, defense, and telemetry work.",
       outcomes: [
@@ -186,10 +186,10 @@ export const defaultSiteContent = {
     {
       id: "tooling",
       eyebrow: "Track 03",
-      title: "Security tools and endpoint protection",
+      title: "Endpoint & Security Operations",
       description:
-        "I use security tooling to support defensive operations, from endpoint protection and hardening checks to visibility across authentication, traffic, and suspicious behaviour.",
-      metric: "Hands-on work across defensive labs, endpoint controls, and security investigation workflows",
+        "I support defensive security operations. From endpoint hardening and Sentinel-based threat detection to WAF validation and suspicious authentication analysis, with documentation that separates symptoms, root cause, and remediation clearly.",
+      metric: "Endpoint hardening, Sentinel-based detection, and security investigation workflows",
       image: "/assets/03_Products_that_202604142137.png",
       alt: "Security tooling visual for endpoint protection, monitoring, and defensive workflows.",
       outcomes: [
@@ -203,10 +203,10 @@ export const defaultSiteContent = {
     {
       id: "delivery",
       eyebrow: "Track 04",
-      title: "Identity, cloud, and support automation",
+      title: "Cloud, Identity & Automation",
       description:
-        "I use Microsoft 365, Entra ID, Azure fundamentals, and small scripts as part of IT operations support, not as a separate career direction.",
-      metric: "From KB articles and support escalations to practical PowerShell, Python, and Azure lab work",
+        "I integrate Microsoft 365, Entra ID, and Azure fundamentals into day-to-day IT operations. PowerShell and Python automate diagnostics, reduce manual effort, and keep support documentation accurate and reusable.",
+      metric: "Microsoft 365, Entra ID, Azure, and automation that reduces manual support effort",
       image: "/assets/04_Communication_that_202604152253.png",
       alt: "Communication-focused visual for delivery, documentation, and stakeholder clarity.",
       outcomes: [
@@ -220,9 +220,9 @@ export const defaultSiteContent = {
   ],
   services: [
     {
-      title: "Firewall, VPN, and network troubleshooting",
+      title: "Firewall, VPN & Network Troubleshooting",
       description:
-        "Operational support for connectivity, firewall policy, VPN access, routing, and switching issues in real customer environments.",
+        "Hands-on support for firewall policy, VPN access, routing, and switching issues in live customer environments with minimal downtime.",
       deliverables: [
         "Firewall rule, NAT, ACL, and HA checks",
         "Remote-access and site-to-site VPN support",
@@ -230,9 +230,9 @@ export const defaultSiteContent = {
       ]
     },
     {
-      title: "Monitoring, incidents, and SLA support",
+      title: "Monitoring, Incidents & SLA Support",
       description:
-        "Structured triage for alerts, user reports, service-impacting issues, escalations, and post-incident follow-up.",
+        "Structured triage from first alert to closure, covering escalations, log review, and post-incident documentation within SLA targets.",
       deliverables: [
         "Log review and incident notes",
         "P1-P3 case handling and escalation support",
@@ -240,9 +240,9 @@ export const defaultSiteContent = {
       ]
     },
     {
-      title: "Security tools and endpoint protection",
+      title: "Endpoint & Security Operations",
       description:
-        "Defensive security support across endpoint controls, SIEM visibility, hardening checks, and practical remediation evidence.",
+        "Defensive security support across endpoint hardening, SIEM visibility, and practical remediation with clear notes on root cause and next steps.",
       deliverables: [
         "Microsoft Sentinel and KQL lab work",
         "Endpoint protection and hardening awareness",
@@ -250,9 +250,9 @@ export const defaultSiteContent = {
       ]
     },
     {
-      title: "Microsoft 365, Entra ID, and Azure basics",
+      title: "Microsoft 365, Entra ID & Azure",
       description:
-        "IT support knowledge across common Microsoft cloud and identity tasks, with awareness of least privilege and secure access.",
+        "Practical Microsoft cloud and identity support covering user access, secure configuration, and least-privilege principles in real IT environments.",
       deliverables: [
         "Microsoft 365 support fundamentals",
         "Entra ID users, groups, and access basics",
@@ -260,9 +260,9 @@ export const defaultSiteContent = {
       ]
     },
     {
-      title: "Documentation and IT operations automation",
+      title: "Documentation & Automation",
       description:
-        "Small scripts and repeatable notes used to speed up diagnostics, reduce manual effort, and make fixes easier to repeat.",
+        "Scripts, checklists, and knowledge-base articles that make support faster, more consistent, and easier for any engineer to pick up.",
       deliverables: [
         "PowerShell and Python support scripts",
         "Diagnostic checklists and knowledge-base articles",
@@ -273,48 +273,48 @@ export const defaultSiteContent = {
   proofPoints: [
     {
       title: "Itarmi IT Services",
-      metric: "25+ incidents",
+      metric: "25+ Incidents Resolved",
       detail:
-        "Resolved live on-site and remote support issues across UK customer environments, with clean change records and customer-facing documentation.",
+        "Delivered live on-site and remote support across customer environments. Clean change records, fast resolutions, and clear customer-facing documentation throughout.",
       tags: ["Routing and switching", "Firewall changes", "VPN restoration"]
     },
     {
       title: "SonicWall",
-      metric: "1,800+ cases each year",
+      metric: "1,800+ Cases Per Year",
       detail:
-        "Handled P1 to P3 incidents across firewall, VPN, SD-WAN, HA, and routing scenarios in a 24x7 support environment.",
+        "Handled P1 to P3 incidents across firewall, VPN, SD-WAN, HA, and routing in a 24x7 enterprise support environment, with escalation ownership and knowledge-article contributions.",
       tags: ["Enterprise support", "Escalations", "Knowledge articles"]
     },
     {
-      title: "MSc Cybersecurity",
-      metric: "Distinction",
+      title: "NCSC-Certified Degree",
+      metric: "Distinction, MSc Cybersecurity",
       detail:
-        "Completed an NCSC-certified MSc focused on network, cloud, risk, and defensive security with hands-on labs and research.",
+        "Completed an NCSC-certified MSc in Cybersecurity covering network security, cloud risk, defensive operations, and hands-on lab research. Graduated with Distinction.",
       tags: ["Threat modeling", "OWASP", "Risk and governance"]
     },
     {
-      title: "Certifications",
-      metric: "CCNA to Security+",
+      title: "CCNA · Network+ · Security+ · AZ-900 · ISC2 CC · Google IT Automation",
+      metric: "6+ Industry Certifications",
       detail:
-        "Built a credential set that supports the practical work: CCNA, Network+, Security+, AZ-900, Google IT Automation, and ISC2 CC.",
+        "A credential set built to support practical work covering networking, cloud fundamentals, security, and IT automation.",
       tags: ["Networking", "Cloud", "Security"]
     }
   ],
   hiringReasons: [
     {
-      title: "Operational networking base",
+      title: "Operational Networking",
       description:
-        "The strongest signal is practical infrastructure support: connectivity, firewall/VPN cases, monitoring, escalation, and service restoration.",
+        "The strongest signal is practical infrastructure support. Connectivity, firewall and VPN cases, monitoring, escalation, and service restoration in live customer environments.",
       items: [
         "TCP/IP, LAN/Wi-Fi, DNS, DHCP, routing, and switching",
         "Firewall, VPN, SD-WAN, HA, NAT, and ACL support",
-        "Customer-facing incident handling in UK support environments"
+        "Customer-facing incident handling in support environments"
       ]
     },
     {
-      title: "Security mindset in support work",
+      title: "Security-Aware Support",
       description:
-        "The security work supports defensive operations: better visibility, cleaner triage, practical hardening, and evidence-led remediation.",
+        "The security work enables better defensive operations. Cleaner triage, practical endpoint hardening, and packet-led remediation informed by real threat analysis.",
       items: [
         "Microsoft Sentinel and network traffic analysis labs",
         "Endpoint protection and secure-access awareness",
@@ -322,9 +322,9 @@ export const defaultSiteContent = {
       ]
     },
     {
-      title: "Clear documentation under pressure",
+      title: "Clear Documentation Under Pressure",
       description:
-        "Support work only closes properly when the fix, impact, evidence, and next step are clear to users, engineers, and service teams.",
+        "Support work only closes well when the fix, impact, and next steps are clear to users, engineers, and service teams. Every time, not just when things go smoothly.",
       items: [
         "Concise technical updates under pressure",
         "Documentation that others can pick up quickly",

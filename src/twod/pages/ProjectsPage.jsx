@@ -181,7 +181,7 @@ export function ProjectsPage() {
         <h2>{sectionCopy.catalogCta.title}</h2>
         <p>{sectionCopy.catalogCta.body}</p>
         <div className="contact-cta__actions">
-          <Link className="button" to={{ pathname: "/", hash: "#contact" }}>
+          <Link className="button" to="/contact">
             Go to contact
           </Link>
           <Link className="button button--secondary" to="/">

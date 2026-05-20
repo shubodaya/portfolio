@@ -350,7 +350,7 @@ const coreProjects = [
     outcomes: [
       "Unified multiple personal productivity workflows under one product",
       "Balanced dense functionality with readable layout structure",
-      "Adds more evidence of full-stack product range"
+      "Adds more project depth across the full-stack product range"
     ],
     image: "/assets/projects/studymate.webp",
     alt: "Students collaborating around a desk with productivity overlays in the background.",

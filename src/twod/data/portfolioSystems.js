@@ -1,19 +1,19 @@
 export const portfolioSystems = [
   {
     slug: "portfolio-network",
-    title: "Network Operations Profile",
+    title: "Network Support Engineer",
     year: "2026",
     category: "Portfolio Systems",
-    type: "Network support evidence",
+    type: "Network Support Services",
     summary:
       "A dedicated page focused on network engineering, NOC thinking, routing, switching, and live operational support.",
     proof:
       "Shows how the same body of work can be framed specifically for network roles without losing technical credibility.",
-    stack: ["Network operations", "Support evidence", "Troubleshooting notes"],
+    stack: ["Network operations", "Support services", "Troubleshooting notes"],
     outcomes: [
       "Live metrics and incident-style framing",
       "Projects centered on labs, troubleshooting, and network design",
-      "Built around the evidence expected in network support and network security roles"
+      "Built around the work expected in network support and network security services"
     ],
     image: "/assets/projects/site-network-browser.png",
     alt: "Network operations page with operations feed and infrastructure hero.",
@@ -27,14 +27,14 @@ export const portfolioSystems = [
   },
   {
     slug: "portfolio-security",
-    title: "Defensive Security Profile",
+    title: "Security Operations Engineer",
     year: "2026",
     category: "Portfolio Systems",
-    type: "Security operations evidence",
+    type: "Security Operations Services",
     summary:
       "A security-first page that brings together incident response, monitoring, certifications, and defensive labs.",
     proof:
-      "Frames support, SOC thinking, and security validation as one security hiring narrative.",
+      "Frames support, SOC thinking, and security validation as one practical security-operations service path.",
     stack: ["Defensive security", "Monitoring", "Incident response"],
     outcomes: [
       "Hero section tailored to defensive security roles",
@@ -58,10 +58,10 @@ export const portfolioSystems = [
     category: "Portfolio Systems",
     type: "Role-specific portfolio site",
     summary:
-      "An offensive-security version of the portfolio built around validation, labs, methodologies, and evidence-led findings.",
+      "An offensive-security version of the portfolio built around validation, labs, methodologies, and structured findings.",
     proof:
       "Demonstrates how pentesting work can be presented with a more operator-focused voice and sharper methodology framing.",
-    stack: ["React", "Routing", "Case-study structure"],
+    stack: ["React", "Routing", "Project structure"],
     outcomes: [
       "Workflow-led copy around recon, validation, detection, and hardening",
       "Projects grouped by offensive and defensive overlap",
@@ -79,10 +79,10 @@ export const portfolioSystems = [
   },
   {
     slug: "portfolio-it",
-    title: "IT Network Support Profile",
+    title: "IT Support Engineer",
     year: "2026",
     category: "Portfolio Systems",
-    type: "IT support evidence",
+    type: "IT Support Services",
     summary:
       "A broader IT support and systems page built around service delivery, identity, tooling, and troubleshooting.",
     proof:
@@ -108,16 +108,16 @@ export const portfolioSystems = [
     title: "Network Security Notes",
     year: "2026",
     category: "Portfolio Systems",
-    type: "Technical writing and lab notes",
+    type: "Technical Writing & Lab Notes",
     summary:
       "Technical notes, lab write-ups, and longer-form explanations across networking, cybersecurity, and operations automation.",
     proof:
-      "Turns project work into readable evidence and shows how the reasoning behind the work holds up when written out clearly.",
+      "Turns project work into readable notes and shows how the reasoning behind the work holds up when written out clearly.",
     stack: ["Technical notes", "Lab write-ups", "Support documentation"],
     outcomes: [
       "Blog-driven writing that adds technical depth",
       "Write-ups for Net-Kit, intrusion detection, and lab workflows",
-      "A stronger evidence layer for network security and IT support roles"
+      "A stronger project layer for network security and IT Support Services"
     ],
     image: "/assets/projects/site-blog-browser.png",
     alt: "Technical blog homepage with published network and security articles.",
