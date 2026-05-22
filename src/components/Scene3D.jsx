@@ -617,7 +617,19 @@ function estimateWrappedRows(value, maxWidth, fontSize) {
 
   if (!text) return 0;
 
-  const charsPerLine = Math.max(18, Math.floor(maxWidth / Math.max(fontSize * 0.42, 0.01)));
+  const lineCapacity = Math.max(14, (maxWidth / Math.max(fontSize, 0.01)) * 1.02);
+  const getCharWidth = (character) => {
+    if (/\s/.test(character)) return 0.32;
+    if (/[ilI|]/.test(character)) return 0.26;
+    if (/[mwMW@%]/.test(character)) return 0.76;
+    if (/[A-Z0-9]/.test(character)) return 0.6;
+    if (/[-/\\]/.test(character)) return 0.34;
+    if (/[,.;:]/.test(character)) return 0.24;
+
+    return 0.5;
+  };
+  const measureWord = (word) =>
+    Array.from(word).reduce((width, character) => width + getCharWidth(character), 0);
 
   return text.split(/\n+/).reduce((rowCount, paragraph) => {
     const words = paragraph.trim().split(/\s+/).filter(Boolean);
@@ -625,18 +637,19 @@ function estimateWrappedRows(value, maxWidth, fontSize) {
     if (!words.length) return rowCount + 1;
 
     let rows = 1;
-    let currentLength = 0;
+    let currentWidth = 0;
 
     words.forEach((word) => {
-      const nextLength = currentLength ? currentLength + word.length + 1 : word.length;
+      const wordWidth = measureWord(word);
+      const nextWidth = currentWidth ? currentWidth + 0.32 + wordWidth : wordWidth;
 
-      if (currentLength && nextLength > charsPerLine) {
+      if (currentWidth && nextWidth > lineCapacity) {
         rows += 1;
-        currentLength = word.length;
+        currentWidth = wordWidth;
         return;
       }
 
-      currentLength = nextLength;
+      currentWidth = nextWidth;
     });
 
     return rowCount + rows;
