@@ -703,6 +703,20 @@
   background: rgba(8, 13, 18, 0.84);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
   padding: 1rem;
+}.twod-clone .admin-sidebar__section{
+  display: grid;
+  gap: 0.65rem;
+}.twod-clone .admin-sidebar__section + .admin-sidebar__section{
+  border-top: 1px solid rgba(112, 213, 255, 0.18);
+  margin-top: 0.25rem;
+  padding-top: 1rem;
+}.twod-clone .admin-sidebar__section-title{
+  color: #70d5ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
 }.twod-clone .admin-sidebar__nav{
   display: grid;
   gap: 0.55rem;
@@ -718,6 +732,11 @@
   border-color: rgba(112, 213, 255, 0.3);
   background: rgba(112, 213, 255, 0.08);
   color: #edf8ff;
+}.twod-clone .admin-sidebar__link.is-active{
+  background: rgba(112, 213, 255, 0.14);
+  border-color: rgba(112, 213, 255, 0.45);
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 #70d5ff;
 }.twod-clone .admin-main{
   display: grid;
   gap: 1rem;

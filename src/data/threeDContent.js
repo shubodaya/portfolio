@@ -88,7 +88,7 @@ export const defaultThreeDContent = {
       body: "Network security labs focused on diagnostics and visibility.",
       icon: "/assets/portfolio/netravax.png",
       image: "/assets/portfolio/netravax.png",
-      typography: { titleScale: 1.08, bodyScale: 1.17, kickerScale: 1, lineHeightScale: 1.04 },
+      typography: { titleScale: 1.08, bodyScale: 1.17, kickerScale: 1, lineHeightScale: 1.04, tileScale: 1.05, tileWidthScale: 1.04, tileHeightScale: 1.04 },
       lines: [
         "• Netravax: packet captures, logs, diagnostics exports",
         "• Network Lab: routing, switching, DNS, DHCP, AD, VPN",

@@ -59,7 +59,7 @@ const internalRoutes = {
   hero: "/",
   about: "/about",
   experience: "/experience",
-  projects: "/featured-projects",
+  projects: "/projects",
   skills: "/skills",
   certifications: "/certifications",
   education: "/education",
@@ -494,37 +494,84 @@ function SectionGate({ activeScene, compact, curve, scrollProgress }) {
   );
 }
 
-function LogoFibreEmission({ compact, curve, scrollProgress }) {
+function LogoFibreEmission({ compact, curve, mode = "intro", scrollProgress }) {
   const refs = useRef([]);
+  const isIntro = mode === "intro";
+  const origin = useMemo(() => {
+    const scene = isIntro ? "hero" : "outro";
+    const offset = isIntro ? [0, compact ? 0.34 : 0.42, 0.34] : [0, compact ? 0.56 : 0.72, 0.56];
+    return vectorFrom(getCurvePoint(curve, scene), offset);
+  }, [compact, curve, isIntro]);
   const particles = useMemo(
-    () =>
-      Array.from({ length: compact ? 18 : 30 }, (_, index) => ({
-        color: index % 4 === 0 ? COLORS.cyan : index % 3 === 0 ? COLORS.amber : COLORS.mint,
-        offset: new THREE.Vector3(
-          Math.sin(index * 2.13) * (compact ? 0.055 : 0.09),
-          Math.cos(index * 1.71) * (compact ? 0.045 : 0.075),
-          Math.sin(index * 0.87) * 0.08
-        ),
-        phase: index / Math.max(1, (compact ? 18 : 30) - 1),
-        size: (compact ? 0.018 : 0.026) + (index % 5) * 0.003
-      })),
+    () => {
+      const count = compact ? 64 : 104;
+
+      return Array.from({ length: count }, (_, index) => {
+        const phase = index / Math.max(1, count - 1);
+        const shapeScale = compact ? 0.74 : 0.92;
+        const thickness = (noise01(index, 6) - 0.5) * (compact ? 0.14 : 0.2);
+        const shape = new THREE.Vector3(
+          Math.sin(phase * Math.PI * 2.04) * (compact ? 0.3 : 0.38) * shapeScale + thickness,
+          THREE.MathUtils.lerp(compact ? 0.66 : 0.82, compact ? -0.66 : -0.82, phase) * shapeScale + (noise01(index, 7) - 0.5) * 0.08,
+          (noise01(index, 8) - 0.5) * 0.08
+        );
+
+        return {
+          color: index % 4 === 0 ? COLORS.cyan : index % 3 === 0 ? COLORS.amber : COLORS.mint,
+          pathOffset: new THREE.Vector3(
+            Math.sin(index * 2.13) * (compact ? 0.045 : 0.075),
+            Math.cos(index * 1.71) * (compact ? 0.035 : 0.06),
+            Math.sin(index * 0.87) * (compact ? 0.045 : 0.07)
+          ),
+          phase,
+          scatter: new THREE.Vector3(
+            (noise01(index, 1) - 0.5) * (compact ? 1.3 : 1.8),
+            (noise01(index, 2) - 0.5) * (compact ? 0.7 : 1.0),
+            (noise01(index, 3) - 0.5) * (compact ? 0.8 : 1.1)
+          ),
+          shape,
+          size: (compact ? 0.017 : 0.024) + (index % 5) * 0.003
+        };
+      });
+    },
     [compact]
   );
 
   useFrame(({ clock }) => {
-    const appear = THREE.MathUtils.smoothstep(scrollProgress, 0.012, 0.12);
-    const fade = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.22, 0.38);
-    const presence = appear * fade;
+    const introBirth = THREE.MathUtils.smoothstep(scrollProgress, 0.026, 0.074);
+    const introScatter = THREE.MathUtils.smoothstep(scrollProgress, 0.045, 0.112);
+    const introCable = THREE.MathUtils.smoothstep(scrollProgress, 0.096, 0.18);
+    const introFade = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.235, 0.34);
+    const outroBirth = THREE.MathUtils.smoothstep(scrollProgress, 0.884, 0.928);
+    const outroGather = THREE.MathUtils.smoothstep(scrollProgress, 0.914, 0.976);
+    const outroFade = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.988, 1);
+    const presence = isIntro ? introBirth * introFade : outroBirth * outroFade;
 
     refs.current.forEach((node, index) => {
       if (!node) return;
       const particle = particles[index];
-      const localTravel = THREE.MathUtils.clamp(scrollProgress * 1.7 + particle.phase * 0.12, 0.005, 0.22);
-      const point = curve.getPointAt(localTravel);
+      const logoShape = particle.shape.clone();
+      if (!isIntro) logoShape.x *= -1;
+      const shapePoint = origin.clone().add(logoShape);
       const shimmer = 0.5 + Math.sin(clock.elapsedTime * 3.2 + index * 0.7) * 0.5;
-      node.position.copy(point).add(particle.offset.clone().multiplyScalar(1 - localTravel * 2.5));
-      node.scale.setScalar(THREE.MathUtils.lerp(node.scale.x, presence * (0.55 + shimmer * 0.75), 0.12));
-      node.material.opacity = THREE.MathUtils.lerp(node.material.opacity, presence * (0.12 + shimmer * 0.42), 0.1);
+      const target = new THREE.Vector3();
+
+      if (isIntro) {
+        const scattered = shapePoint.clone().add(particle.scatter.clone().multiplyScalar(introScatter * (1 - introCable)));
+        const requestedTravel = 0.02 + introCable * (0.16 + particle.phase * 0.1) + Math.max(0, scrollProgress - 0.12) * 0.7;
+        const signalTrailLimit = THREE.MathUtils.clamp(scrollProgress - (compact ? 0.012 : 0.016), 0.002, 0.34);
+        const localTravel = THREE.MathUtils.clamp(Math.min(requestedTravel, signalTrailLimit), 0.002, 0.34);
+        const cablePoint = curve.getPointAt(localTravel).add(particle.pathOffset.clone().multiplyScalar(1 - introCable * 0.88));
+        target.copy(scattered).lerp(cablePoint, introCable);
+      } else {
+        const localTravel = THREE.MathUtils.clamp(0.835 + particle.phase * 0.13 - (1 - outroGather) * 0.08, 0.75, 0.966);
+        const cablePoint = curve.getPointAt(localTravel).add(particle.scatter.clone().multiplyScalar((1 - outroGather) * 0.34));
+        target.copy(cablePoint).lerp(shapePoint, outroGather);
+      }
+
+      node.position.copy(target);
+      node.scale.setScalar(THREE.MathUtils.lerp(node.scale.x, presence * (0.48 + shimmer * 0.78), 0.12));
+      node.material.opacity = THREE.MathUtils.lerp(node.material.opacity, presence * (0.14 + shimmer * 0.5), 0.1);
     });
   });
 
@@ -546,7 +593,7 @@ function LogoFibreEmission({ compact, curve, scrollProgress }) {
 }
 
 function estimateTileLines(textItems, compact) {
-  const wrapAt = compact ? 28 : 72;
+  const wrapAt = compact ? 24 : 58;
   return textItems.reduce((total, item) => total + Math.max(1, Math.ceil(String(item ?? "").length / wrapAt)), 0);
 }
 
@@ -560,24 +607,30 @@ function getTileTypography(typography = {}) {
     titleScale: readTypographyScale(typography.titleScale, 1, 0.75, 1.45),
     bodyScale: readTypographyScale(typography.bodyScale, 1, 0.75, 1.55),
     kickerScale: readTypographyScale(typography.kickerScale, 1, 0.75, 1.3),
-    lineHeightScale: readTypographyScale(typography.lineHeightScale, 1, 0.9, 1.25)
+    lineHeightScale: readTypographyScale(typography.lineHeightScale, 1, 0.9, 1.25),
+    tileScale: readTypographyScale(typography.tileScale, 1, 0.7, 1.2),
+    tileWidthScale: readTypographyScale(typography.tileWidthScale, 1, 0.78, 1.22),
+    tileHeightScale: readTypographyScale(typography.tileHeightScale, 1, 0.78, 1.24),
+    buttonScale: readTypographyScale(typography.buttonScale, 1, 0.8, 1.35)
   };
 }
 
 function getTileMetrics({ body, compact, lines = [], scene, title, typography }) {
-  const { bodyScale } = getTileTypography(typography);
+  const { bodyScale, tileHeightScale, tileScale, tileWidthScale } = getTileTypography(typography);
   const safeTitle = String(title ?? "");
   const longTitle = safeTitle.length > 48 || safeTitle.includes("\n");
-  const estimatedLines = estimateTileLines(lines, compact) + Math.max(1, Math.ceil(String(body ?? "").length / (compact ? 26 : 56)));
-  const dense = estimatedLines > (compact ? 7 : 8);
-  const heightScale = Math.max(0, bodyScale - 1) * (compact ? 0.18 : 0.32);
+  const estimatedLines = estimateTileLines(lines, compact) + Math.max(1, Math.ceil(String(body ?? "").length / (compact ? 23 : 48)));
+  const dense = estimatedLines > (compact ? 6 : 7);
+  const heightPad = Math.max(0, bodyScale - 1) * (compact ? 0.18 : 0.3);
+  const baseHeight = compact ? (dense ? 3.54 : 3.14) : dense ? 3.86 : 3.46;
+  const baseWidth = compact ? (dense ? 3.34 : 3.12) : dense ? 5.72 : 5.38;
 
   return {
     dense,
-    height: compact ? (dense ? 3.28 : 2.92) + heightScale : (dense ? 3.82 : 3.48) + heightScale,
+    height: (baseHeight + heightPad) * tileHeightScale,
     longTitle,
-    scale: compact ? 0.78 : 0.84,
-    width: compact ? (dense ? 3.38 : 3.16) : dense ? 6.12 : 5.68
+    scale: (compact ? 0.76 : 0.82) * tileScale,
+    width: baseWidth * tileWidthScale
   };
 }
 
@@ -586,27 +639,32 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
   const panelRef = useRef(null);
   const glowRef = useRef(null);
   const isHero = false;
-  const { bodyScale, kickerScale, lineHeightScale, titleScale } = getTileTypography(typography);
+  const { bodyScale, buttonScale, kickerScale, lineHeightScale, titleScale } = getTileTypography(typography);
   const { dense, height, longTitle, scale: activeScale, width } = getTileMetrics({ body, compact, lines, scene, title, typography });
-  const titleSize = (compact ? (longTitle ? 0.112 : 0.148) : isHero ? 0.17 : longTitle ? 0.17 : dense ? 0.235 : 0.265) * titleScale;
-  const subtitleSize = (compact ? 0.071 : dense ? 0.105 : 0.112) * bodyScale;
-  const bulletSize = (compact ? (dense ? 0.061 : 0.066) : dense ? 0.078 : 0.088) * bodyScale;
-  const bodyLineHeight = (compact ? 1.3 : 1.28) * lineHeightScale;
-  const kickerSize = (compact ? 0.074 : isHero ? 0.078 : dense ? 0.082 : 0.094) * kickerScale;
+  const titleSize = (compact ? (longTitle ? 0.132 : 0.176) : isHero ? 0.24 : longTitle ? 0.248 : dense ? 0.34 : 0.38) * titleScale;
+  const contentSize = (compact ? (dense ? 0.106 : 0.116) : dense ? 0.148 : 0.162) * bodyScale;
+  const subtitleSize = contentSize;
+  const bulletSize = contentSize;
+  const bodyLineHeight = (compact ? 1.12 : 1.08) * lineHeightScale;
+  const kickerSize = (compact ? 0.1 : isHero ? 0.118 : dense ? 0.122 : 0.138) * kickerScale;
+  const ctaSize = (compact ? 0.102 : 0.142) * buttonScale;
   const bulletText = lines.filter(Boolean).join("\n");
   const leftBulletText = bulletText;
   const portX = position.x >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
   const portY = -height / 2 + (compact ? 0.44 : 0.58);
   const hasIcon = Boolean(icon);
-  const logoReserve = hasIcon ? (compact ? 0.72 : 0.96) : 0;
-  const inset = compact ? 0.24 : 0.34;
+  const logoReserve = hasIcon ? (compact ? 0.66 : 0.84) : 0;
+  const inset = compact ? 0.2 : 0.28;
   const hasKicker = Boolean(kicker);
-  const titleTop = height / 2 - (compact ? (hasKicker ? 0.38 : 0.28) : hasKicker ? 0.46 : 0.34);
-  const subtitleY = titleTop - (compact ? 0.46 : 0.62);
-  const bulletY = subtitleY - (compact ? 0.56 : 0.68);
+  const titleTop = height / 2 - (compact ? (hasKicker ? 0.34 : 0.24) : hasKicker ? 0.4 : 0.28);
+  const subtitleY = titleTop - (compact ? 0.5 : 0.7);
+  const bulletY = subtitleY - (compact ? 0.62 : 0.78);
   const bodyX = -width / 2 + inset;
-  const bodyMaxWidth = width - inset * 2 - (compact ? 0.18 : 0.24);
+  const bodyMaxWidth = width - inset * 2 - (compact ? 0.08 : 0.1);
   const columnWidth = bodyMaxWidth;
+  const buttonWidth = (compact ? Math.min(1.62, width - 0.54) : 2.06) * buttonScale;
+  const buttonHeight = (compact ? 0.34 : 0.42) * buttonScale;
+  const buttonY = -height / 2 + (compact ? 0.3 : 0.38);
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
@@ -720,7 +778,7 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
         anchorY="top"
         color="#d7e6ea"
         fontSize={subtitleSize}
-        lineHeight={1.2}
+        lineHeight={bodyLineHeight}
         material-depthTest={false}
         maxWidth={bodyMaxWidth}
         position={[bodyX, subtitleY, 0.07]}
@@ -741,6 +799,28 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
       >
         {leftBulletText}
       </Text>
+      <group position={[0, buttonY, 0.105]} renderOrder={9}>
+        <RoundedBox args={[buttonWidth, buttonHeight, 0.038]} radius={0.055} smoothness={5}>
+          <meshBasicMaterial color={color} transparent opacity={presence * THREE.MathUtils.lerp(0.2, 0.44, THREE.MathUtils.clamp(activation, 0, 1))} blending={THREE.AdditiveBlending} depthWrite={false} />
+        </RoundedBox>
+        <RoundedBox args={[buttonWidth - 0.045, buttonHeight - 0.045, 0.032]} position={[0, 0, 0.02]} radius={0.045} smoothness={5}>
+          <meshPhysicalMaterial color="#061014" emissive={color} emissiveIntensity={THREE.MathUtils.lerp(0.08, 0.26, THREE.MathUtils.clamp(activation, 0, 1))} metalness={0.22} opacity={0.94} roughness={0.3} transparent />
+        </RoundedBox>
+        <Text
+          anchorX="center"
+          anchorY="middle"
+          color="#f4fbff"
+          fontSize={ctaSize}
+          fontWeight={800}
+          letterSpacing={0}
+          material-depthTest={false}
+          maxWidth={buttonWidth - 0.24}
+          position={[0, 0.002, 0.055]}
+          renderOrder={10}
+        >
+          Open Section
+        </Text>
+      </group>
     </group>
   );
 }
@@ -875,8 +955,10 @@ function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDC
           scrollProgress={scrollProgress}
         />
       ) : null}
+      <LogoFibreEmission compact={compact} curve={curve} mode="intro" scrollProgress={scrollProgress} />
       <FibreCable compact={compact} curve={curve} presence={fibrePresence} scrollProgress={scrollProgress} signalProgress={fibreProgress} />
       <RunwayTiles compact={compact} curve={curve} fibrePresence={fibrePresence} fibreProgress={fibreProgress} navigate={navigate} scrollProgress={scrollProgress} threeDContent={threeDContent} />
+      <LogoFibreEmission compact={compact} curve={curve} mode="outro" scrollProgress={scrollProgress} />
       <ContactOutroS activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} scrollProgress={scrollProgress} />
       <EffectComposer multisampling={0}>
         <Bloom intensity={compact ? 0.2 : 0.28} luminanceThreshold={0.18} mipmapBlur radius={compact ? 0.22 : 0.3} />
