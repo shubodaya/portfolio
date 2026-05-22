@@ -612,6 +612,37 @@ function estimateTileLines(textItems, compact) {
   return textItems.reduce((total, item) => total + Math.max(1, Math.ceil(String(item ?? "").length / wrapAt)), 0);
 }
 
+function estimateWrappedRows(value, maxWidth, fontSize) {
+  const text = String(value ?? "").trim();
+
+  if (!text) return 0;
+
+  const charsPerLine = Math.max(18, Math.floor(maxWidth / Math.max(fontSize * 0.42, 0.01)));
+
+  return text.split(/\n+/).reduce((rowCount, paragraph) => {
+    const words = paragraph.trim().split(/\s+/).filter(Boolean);
+
+    if (!words.length) return rowCount + 1;
+
+    let rows = 1;
+    let currentLength = 0;
+
+    words.forEach((word) => {
+      const nextLength = currentLength ? currentLength + word.length + 1 : word.length;
+
+      if (currentLength && nextLength > charsPerLine) {
+        rows += 1;
+        currentLength = word.length;
+        return;
+      }
+
+      currentLength = nextLength;
+    });
+
+    return rowCount + rows;
+  }, 0);
+}
+
 function readTypographyScale(value, fallback, min, max) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? THREE.MathUtils.clamp(numeric, min, max) : fallback;
@@ -620,6 +651,7 @@ function readTypographyScale(value, fallback, min, max) {
 function cleanBulletText(value) {
   return String(value ?? "")
     .replace(/^\s*(?:[-*]|\u2022|â€¢)\s*/, "")
+    .replace(/^\s*\u00c3\u00a2\u00e2\u201a\u00ac\u00c2\u00a2\s*/, "")
     .trim();
 }
 
@@ -678,17 +710,20 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
   const hasKicker = Boolean(kicker);
   const titleTop = height / 2 - (compact ? (hasKicker ? 0.34 : 0.24) : hasKicker ? 0.4 : 0.28);
   const subtitleY = titleTop - (compact ? 0.5 : 0.7);
-  const bulletY = subtitleY - (compact ? 0.62 : 0.78);
   const bodyX = -width / 2 + inset;
   const bodyMaxWidth = width - inset * 2 - (compact ? 0.08 : 0.1);
   const columnWidth = bodyMaxWidth;
-  const bulletIndent = compact ? 0.17 : 0.24;
+  const bodyRows = Math.max(1, estimateWrappedRows(body, bodyMaxWidth, subtitleSize));
+  const bodyRowUnit = subtitleSize * bodyLineHeight;
+  const bulletTopGap = compact ? 0.13 : 0.19;
+  const bulletY = subtitleY - bodyRows * bodyRowUnit * 0.96 - bulletTopGap;
+  const bulletIndent = compact ? 0.16 : 0.21;
   const bulletTextWidth = columnWidth - bulletIndent;
-  const bulletLineUnit = bulletSize * bodyLineHeight * (compact ? 1.42 : 1.34);
-  const bulletGap = compact ? 0.055 : 0.075;
+  const bulletLineUnit = bulletSize * bodyLineHeight * (compact ? 1.1 : 1.08);
+  const bulletGap = compact ? 0.095 : 0.12;
   let bulletCursor = bulletY;
   const bulletRows = bulletItems.map((item) => {
-    const estimatedRows = Math.max(1, Math.ceil(item.length / (compact ? 36 : 58)));
+    const estimatedRows = Math.max(1, estimateWrappedRows(item, bulletTextWidth, bulletSize));
     const y = bulletCursor;
     bulletCursor -= estimatedRows * bulletLineUnit + bulletGap;
 
