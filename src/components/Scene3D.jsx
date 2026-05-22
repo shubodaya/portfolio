@@ -602,6 +602,12 @@ function readTypographyScale(value, fallback, min, max) {
   return Number.isFinite(numeric) ? THREE.MathUtils.clamp(numeric, min, max) : fallback;
 }
 
+function cleanBulletText(value) {
+  return String(value ?? "")
+    .replace(/^\s*(?:[-*]|\u2022|â€¢)\s*/, "")
+    .trim();
+}
+
 function getTileTypography(typography = {}) {
   return {
     titleScale: readTypographyScale(typography.titleScale, 1, 0.75, 1.45),
@@ -648,8 +654,7 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
   const bodyLineHeight = (compact ? 1.12 : 1.08) * lineHeightScale;
   const kickerSize = (compact ? 0.1 : isHero ? 0.118 : dense ? 0.122 : 0.138) * kickerScale;
   const ctaSize = (compact ? 0.102 : 0.142) * buttonScale;
-  const bulletText = lines.filter(Boolean).join("\n");
-  const leftBulletText = bulletText;
+  const bulletItems = lines.map(cleanBulletText).filter(Boolean);
   const portX = position.x >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
   const portY = -height / 2 + (compact ? 0.44 : 0.58);
   const hasIcon = Boolean(icon);
@@ -662,9 +667,22 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
   const bodyX = -width / 2 + inset;
   const bodyMaxWidth = width - inset * 2 - (compact ? 0.08 : 0.1);
   const columnWidth = bodyMaxWidth;
+  const bulletIndent = compact ? 0.17 : 0.24;
+  const bulletTextWidth = columnWidth - bulletIndent;
+  const bulletLineUnit = bulletSize * bodyLineHeight * (compact ? 1.42 : 1.34);
+  const bulletGap = compact ? 0.055 : 0.075;
+  let bulletCursor = bulletY;
+  const bulletRows = bulletItems.map((item) => {
+    const estimatedRows = Math.max(1, Math.ceil(item.length / (compact ? 36 : 58)));
+    const y = bulletCursor;
+    bulletCursor -= estimatedRows * bulletLineUnit + bulletGap;
+
+    return { item, y };
+  });
   const buttonWidth = (compact ? Math.min(1.62, width - 0.54) : 2.06) * buttonScale;
   const buttonHeight = (compact ? 0.34 : 0.42) * buttonScale;
   const buttonY = -height / 2 + (compact ? 0.3 : 0.38);
+  const showOpenButton = scene !== "hero";
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
@@ -786,41 +804,60 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
       >
         {body}
       </Text>
-      <Text
-        anchorX="left"
-        anchorY="top"
-        color="#e6f4f6"
-        fontSize={bulletSize}
-        lineHeight={bodyLineHeight}
-        material-depthTest={false}
-        maxWidth={columnWidth}
-        position={[bodyX, bulletY, 0.07]}
-        renderOrder={6}
-      >
-        {leftBulletText}
-      </Text>
-      <group position={[0, buttonY, 0.105]} renderOrder={9}>
-        <RoundedBox args={[buttonWidth, buttonHeight, 0.038]} radius={0.055} smoothness={5}>
-          <meshBasicMaterial color={color} transparent opacity={presence * THREE.MathUtils.lerp(0.2, 0.44, THREE.MathUtils.clamp(activation, 0, 1))} blending={THREE.AdditiveBlending} depthWrite={false} />
-        </RoundedBox>
-        <RoundedBox args={[buttonWidth - 0.045, buttonHeight - 0.045, 0.032]} position={[0, 0, 0.02]} radius={0.045} smoothness={5}>
-          <meshPhysicalMaterial color="#061014" emissive={color} emissiveIntensity={THREE.MathUtils.lerp(0.08, 0.26, THREE.MathUtils.clamp(activation, 0, 1))} metalness={0.22} opacity={0.94} roughness={0.3} transparent />
-        </RoundedBox>
-        <Text
-          anchorX="center"
-          anchorY="middle"
-          color="#f4fbff"
-          fontSize={ctaSize}
-          fontWeight={800}
-          letterSpacing={0}
-          material-depthTest={false}
-          maxWidth={buttonWidth - 0.24}
-          position={[0, 0.002, 0.055]}
-          renderOrder={10}
-        >
-          Open Section
-        </Text>
-      </group>
+      {bulletRows.map(({ item, y }, index) => (
+        <group key={`bullet-${scene}-${index}`} renderOrder={6}>
+          <Text
+            anchorX="left"
+            anchorY="top"
+            color="#e6f4f6"
+            fontSize={bulletSize}
+            lineHeight={bodyLineHeight}
+            material-depthTest={false}
+            maxWidth={bulletIndent}
+            position={[bodyX, y, 0.07]}
+            renderOrder={6}
+          >
+            •
+          </Text>
+          <Text
+            anchorX="left"
+            anchorY="top"
+            color="#e6f4f6"
+            fontSize={bulletSize}
+            lineHeight={bodyLineHeight}
+            material-depthTest={false}
+            maxWidth={bulletTextWidth}
+            position={[bodyX + bulletIndent, y, 0.07]}
+            renderOrder={6}
+          >
+            {item}
+          </Text>
+        </group>
+      ))}
+      {showOpenButton ? (
+        <group position={[0, buttonY, 0.105]} renderOrder={9}>
+          <RoundedBox args={[buttonWidth, buttonHeight, 0.038]} radius={0.055} smoothness={5}>
+            <meshBasicMaterial color={color} transparent opacity={presence * THREE.MathUtils.lerp(0.2, 0.44, THREE.MathUtils.clamp(activation, 0, 1))} blending={THREE.AdditiveBlending} depthWrite={false} />
+          </RoundedBox>
+          <RoundedBox args={[buttonWidth - 0.045, buttonHeight - 0.045, 0.032]} position={[0, 0, 0.02]} radius={0.045} smoothness={5}>
+            <meshPhysicalMaterial color="#061014" emissive={color} emissiveIntensity={THREE.MathUtils.lerp(0.08, 0.26, THREE.MathUtils.clamp(activation, 0, 1))} metalness={0.22} opacity={0.94} roughness={0.3} transparent />
+          </RoundedBox>
+          <Text
+            anchorX="center"
+            anchorY="middle"
+            color="#f4fbff"
+            fontSize={ctaSize}
+            fontWeight={800}
+            letterSpacing={0}
+            material-depthTest={false}
+            maxWidth={buttonWidth - 0.24}
+            position={[0, 0.002, 0.055]}
+            renderOrder={10}
+          >
+            Open Section
+          </Text>
+        </group>
+      ) : null}
     </group>
   );
 }

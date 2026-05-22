@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, useMotionValueEvent, useScroll } from "framer-motion";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { AdminPortal } from "./twod/AdminPortal.jsx";
@@ -18,23 +18,31 @@ function linearProgress(value, start, end) {
   return clamp01((value - start) / Math.max(0.0001, end - start));
 }
 
-const scrollSceneToRouteScene = {
-  hero: "hero",
-  about: "highlights",
-  experience: "highlights",
-  projects: "projects",
-  skills: "catalog",
-  certifications: "catalog",
-  education: "catalog",
-  contact: "contact"
-};
+const tileRouteNodes = [
+  { id: "about", label: "About", short: "ABT", signal: "About", summary: "Network security profile, support approach, and operating strengths." },
+  { id: "experience", label: "Experience", short: "EXP", signal: "Experience", summary: "Firewall, VPN, network support, and field support experience." },
+  { id: "projects", label: "Projects", short: "PRJ", signal: "Projects", path: "/projects", summary: "Diagnostics, visibility, security labs, and portfolio systems." },
+  { id: "skills", label: "Skills", short: "SKL", signal: "Skills", summary: "Firewall, VPN, networking, cloud, security tooling, and support automation." },
+  { id: "certifications", label: "Certifications", short: "CRT", signal: "Certifications", summary: "Networking, cloud, security, and support certifications." },
+  { id: "education", label: "Education", short: "EDU", signal: "Education", summary: "Cybersecurity education and supporting technical development." },
+  { id: "contact", label: "Contact", short: "CON", signal: "Contact", summary: "Contact routes for network security and infrastructure support work." }
+];
+
+function getTileRouteNodes(threeDContent) {
+  const tiles = threeDContent?.tiles ?? {};
+
+  return tileRouteNodes.map((node) => ({
+    ...node,
+    label: tiles[node.id]?.title || node.label,
+    signal: tiles[node.id]?.title || node.signal,
+    summary: tiles[node.id]?.body || node.summary
+  }));
+}
 
 function getScrollNavScene(activeScene, scrollProgress) {
   if (scrollProgress <= 0.104 || scrollProgress >= 0.895) return activeScene;
 
-  const tileScene = getFibreFocusScene(getFibreSignalProgress(scrollProgress), "hero");
-
-  return scrollSceneToRouteScene[tileScene] ?? activeScene;
+  return getFibreFocusScene(getFibreSignalProgress(scrollProgress), "hero");
 }
 
 function JourneyShutter({ scrollProgress }) {
@@ -92,6 +100,7 @@ function HomeExperienceContent() {
   const [activeProject, setActiveProject] = useState("netravax");
   const activeScene = useActiveScene();
   const navScene = getScrollNavScene(activeScene, scrollProgress);
+  const routeNodes = useMemo(() => getTileRouteNodes(threeDContent), [threeDContent]);
   const completeIntro = useCallback(() => setIntroComplete(true), []);
 
   useMotionValueEvent(scrollYProgress, "change", setScrollProgress);
@@ -110,7 +119,7 @@ function HomeExperienceContent() {
       />
       <JourneyShutter scrollProgress={scrollProgress} />
 
-      <Nav activeScene={navScene} onHoverScene={setHoveredScene} routeNodes={threeDContent.sections} />
+      <Nav activeScene={navScene} onHoverScene={setHoveredScene} routeNodes={routeNodes} />
       <AnimatePresence>
         {!introComplete ? <LogoIntro onComplete={completeIntro} /> : null}
       </AnimatePresence>
@@ -121,7 +130,7 @@ function HomeExperienceContent() {
         hero={threeDContent.hero}
         onHoverScene={setHoveredScene}
         profile={threeDContent.profile}
-        routeNodes={threeDContent.sections}
+        routeNodes={routeNodes}
         setActiveProject={setActiveProject}
       />
 

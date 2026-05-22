@@ -19,59 +19,51 @@ export const profile = {
   }
 };
 
-export const sceneOrder = ["hero", "services", "highlights", "projects", "role-pages", "insights", "catalog", "resume", "contact", "outro"];
+export const sceneOrder = ["hero", "about", "experience", "projects", "skills", "certifications", "education", "contact", "outro"];
 
 export const routeNodes = [
   {
-    id: "services",
-    label: "Services",
-    short: "SVC",
-    signal: "Services",
-    summary: "Firewall, VPN, connectivity, monitoring, documentation, and support automation."
-  },
-  {
-    id: "highlights",
+    id: "about",
     label: "About",
-    short: "HIL",
+    short: "ABT",
     signal: "About",
     summary: "SonicWall support, contract field work, cybersecurity study, and repeatable troubleshooting."
+  },
+  {
+    id: "experience",
+    label: "Experience",
+    short: "EXP",
+    signal: "Experience",
+    summary: "Firewall, VPN, network support, and field support experience."
   },
   {
     id: "projects",
     label: "Projects",
     short: "PRJ",
     signal: "Projects",
-    path: "/featured-projects",
+    path: "/projects",
     summary: "Diagnostics, Microsoft security, monitoring, research, and network tooling projects."
   },
   {
-    id: "role-pages",
-    label: "Role Pages",
-    short: "ROL",
-    signal: "Role Pages",
-    summary: "Focused pages for Network Support Engineer, Security Operations Engineer, and IT Support Engineer services."
+    id: "skills",
+    label: "Skills",
+    short: "SKL",
+    signal: "Skills",
+    summary: "Firewall, VPN, networking, cloud, security tooling, and support automation."
   },
   {
-    id: "insights",
-    label: "Insights",
-    short: "INS",
-    signal: "Insights",
-    summary: "Technical notes that explain troubleshooting, visibility, hardening, and operational follow-up."
+    id: "certifications",
+    label: "Certifications",
+    short: "CRT",
+    signal: "Certifications",
+    summary: "Networking, cloud, security, and support certifications."
   },
   {
-    id: "catalog",
-    label: "Skills & Catalog",
-    short: "CAT",
-    signal: "Skills & Catalog",
-    summary: "A broader catalog of projects, labs, certifications, education, and supporting technical work."
-  },
-  {
-    id: "resume",
-    label: "Resume",
-    short: "CV",
-    signal: "Resume",
-    path: profile.links.resume,
-    summary: "Open the full CV with role focus, technical strengths, and contact details."
+    id: "education",
+    label: "Education",
+    short: "EDU",
+    signal: "Education",
+    summary: "Cybersecurity education and supporting technical development."
   },
   {
     id: "contact",

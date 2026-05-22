@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 import {
   cloneThreeDContent,
   defaultThreeDContent,
-  getMergedThreeDContent,
-  tileSectionIds
+  getMergedThreeDContent
 } from "../data/threeDContent";
 import { cloneSiteContent, defaultSiteContent, getMergedSiteContent } from "./data/siteData";
 import { defaultProjects, getMergedProjects } from "./data/projectCatalog";
@@ -143,8 +142,6 @@ const homepageTileAdminIds = [
   "contact"
 ];
 
-const allThreeDTileAdminIds = [...new Set([...homepageTileAdminIds, ...tileSectionIds])];
-
 const threeDTileLabels = {
   hero: "Home tile",
   about: "About tile",
@@ -153,13 +150,7 @@ const threeDTileLabels = {
   skills: "Skills tile",
   certifications: "Certifications tile",
   education: "Education tile",
-  contact: "Contact tile",
-  services: "Services route tile",
-  highlights: "Highlights route tile",
-  "role-pages": "Role Pages route tile",
-  insights: "Insights route tile",
-  catalog: "Catalog route tile",
-  resume: "Resume route tile"
+  contact: "Contact tile"
 };
 
 const projectTreeLink = (project, prefix = "project") => ({
@@ -203,10 +194,9 @@ const buildTreeGroups = (projectEditors) => {
           id: "admin-tree-3d-section-tiles",
           targetId: "admin-3d-tile-hero",
           label: "Section Tiles",
-          children: allThreeDTileAdminIds.map((id) => threeDTileTreeLink(id))
+          children: homepageTileAdminIds.map((id) => threeDTileTreeLink(id))
         },
-        { id: "admin-tree-3d-routes", targetId: "admin-3d-sections", label: "Tile Links / Routes" },
-        { id: "admin-tree-3d-visual-settings", targetId: "admin-3d-tile-hero", label: "3D Visual Settings" }
+        { id: "admin-tree-3d-routes", targetId: "admin-3d-sections", label: "Tile Links / Routes" }
       ]
     },
     {
@@ -1222,7 +1212,7 @@ export function AdminPortal() {
           <>
             <ThreeDProfileEditor threeDDraft={threeDDraft} updateThreeD={updateThreeD} />
             <ThreeDSectionsEditor threeDDraft={threeDDraft} updateThreeD={updateThreeD} />
-            {allThreeDTileAdminIds.map((id) => renderTileEditor(id))}
+            {homepageTileAdminIds.map((id) => renderTileEditor(id))}
           </>
         );
       case "admin-tree-about-page":

@@ -84,7 +84,7 @@ export const defaultThreeDContent = {
     },
     projects: {
       kicker: "03 / PROJECTS",
-      title: "PROJECTS",
+      title: "Projects",
       body: "Network security labs focused on diagnostics and visibility.",
       icon: "/assets/portfolio/netravax.png",
       image: "/assets/portfolio/netravax.png",
@@ -154,11 +154,11 @@ export const defaultThreeDContent = {
     },
     contact: {
       kicker: "06 / CONTACT",
-      title: "CONTACT",
+      title: "Contact",
       body: "Available for network security, IT support, and infrastructure support engagements.",
       icon: "/assets/favicon/apple-touch-icon.png",
       image: "/assets/portfolio/serverblue.png",
-      typography: { titleScale: 1.06, bodyScale: 1.16, kickerScale: 1, lineHeightScale: 1.04 },
+      typography: { titleScale: 1.06, bodyScale: 1.16, kickerScale: 1, lineHeightScale: 1.04, tileScale: 1.05, tileWidthScale: 1.04, tileHeightScale: 1.04 },
       lines: [
         "• Firewall, VPN, troubleshooting, incident response",
         "• Remote, hybrid, and on-site support",
