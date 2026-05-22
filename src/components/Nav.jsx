@@ -36,6 +36,18 @@ export function Nav({ activeScene, onHoverScene, routeNodes: nodes = routeNodes 
         <span>S</span>
       </Link>
       <nav aria-label="Portfolio route" id="portfolio-mobile-nav" ref={navRef}>
+        <a
+          className={activeScene === "hero" ? "is-active" : ""}
+          href="#hero"
+          onBlur={() => onHoverScene?.(null)}
+          onClick={(event) => handleSceneClick(event, "hero")}
+          onFocus={() => onHoverScene?.("hero")}
+          onMouseEnter={() => onHoverScene?.("hero")}
+          onMouseLeave={() => onHoverScene?.(null)}
+        >
+          <span>HME</span>
+          <b>Home</b>
+        </a>
         {nodes.map((node) => {
           const commonProps = {
             onBlur: () => onHoverScene?.(null),

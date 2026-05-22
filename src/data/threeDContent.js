@@ -170,5 +170,48 @@ export const defaultThreeDContent = {
   }
 };
 
+defaultThreeDContent.tiles.hero = {
+  ...cloneThreeDContent(defaultThreeDContent.tiles.services),
+  kicker: "",
+  title: "Home",
+  body: "Network security support focused on clear diagnostics, reliable connectivity, and practical evidence.",
+  lines: [
+    "- Firewall, VPN, routing, and connectivity troubleshooting",
+    "- Packet captures, logs, CLI checks, and clear fault isolation",
+    "- Practical support notes that help teams act quickly",
+    "- Remote, hybrid, and client-site support for operational networks"
+  ]
+};
+
+defaultThreeDContent.tiles.about = {
+  ...cloneThreeDContent(defaultThreeDContent.tiles.highlights),
+  kicker: "",
+  title: "About"
+};
+
+defaultThreeDContent.tiles.experience = {
+  ...cloneThreeDContent(defaultThreeDContent.tiles.resume),
+  kicker: "",
+  title: "Experience"
+};
+
+defaultThreeDContent.tiles.skills = {
+  ...cloneThreeDContent(defaultThreeDContent.tiles.catalog),
+  kicker: "",
+  title: "Skills"
+};
+
+defaultThreeDContent.tiles.certifications = {
+  ...cloneThreeDContent(defaultThreeDContent.tiles.catalog),
+  kicker: "",
+  title: "Certifications"
+};
+
+defaultThreeDContent.tiles.education = {
+  ...cloneThreeDContent(defaultThreeDContent.tiles.catalog),
+  kicker: "",
+  title: "Education"
+};
+
 export const getMergedThreeDContent = (overrides) =>
   mergeThreeDContent(defaultThreeDContent, overrides);

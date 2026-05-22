@@ -4,14 +4,14 @@ import { useRef } from "react";
 import * as THREE from "three";
 import helvetikerBold from "three/examples/fonts/helvetiker_bold.typeface.json";
 
-export function SMark3D({ active = false, compact = false, position = [0, 0, 0], scale = 1, scrollProgress = 0 }) {
+export function SMark3D({ active = false, compact = false, href, navigate, opacity = 1, position = [0, 0, 0], scale = 1, scrollProgress = 0 }) {
   const groupRef = useRef(null);
 
   useFrame(({ clock, pointer }) => {
     const elapsed = clock.elapsedTime;
     const baseY = Array.isArray(position) ? position[1] : position.y ?? 0;
     if (groupRef.current) {
-      const targetScale = scale * (active ? 1 : 0.86);
+      const targetScale = scale * (active ? 1 : 0.86) * THREE.MathUtils.clamp(0.72 + opacity * 0.28, 0.01, 1);
       const horizontalYaw = Math.sin(elapsed * 0.42 + scrollProgress * 1.1) * 0.24 + pointer.x * 0.1;
       groupRef.current.scale.setScalar(THREE.MathUtils.lerp(groupRef.current.scale.x, targetScale, 0.06));
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, pointer.y * 0.035, 0.035);
@@ -22,7 +22,31 @@ export function SMark3D({ active = false, compact = false, position = [0, 0, 0],
   });
 
   return (
-    <group ref={groupRef} position={position}>
+    <group
+      ref={groupRef}
+      position={position}
+      onClick={(event) => {
+        if (!href || opacity < 0.18) return;
+        event.stopPropagation();
+        if (href.startsWith("/") && navigate) {
+          if (href === "/" && window.location.pathname === "/") {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+          }
+          navigate(href);
+          return;
+        }
+        window.location.href = href;
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = "";
+      }}
+      onPointerOver={(event) => {
+        if (!href || opacity < 0.18) return;
+        event.stopPropagation();
+        document.body.style.cursor = "pointer";
+      }}
+    >
       <Center position={[0, -0.08, 0]}>
         <Text3D
           bevelEnabled
@@ -39,7 +63,7 @@ export function SMark3D({ active = false, compact = false, position = [0, 0, 0],
           <meshBasicMaterial
             color="#76ffbf"
             transparent
-            opacity={active ? 0.2 : 0.12}
+            opacity={(active ? 0.2 : 0.12) * opacity}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
           />
@@ -59,15 +83,17 @@ export function SMark3D({ active = false, compact = false, position = [0, 0, 0],
             clearcoatRoughness={0.16}
             color="#1b2221"
             emissive="#0fb78e"
-            emissiveIntensity={active ? 0.34 : 0.16}
+            emissiveIntensity={(active ? 0.34 : 0.16) * opacity}
             metalness={0.86}
+            opacity={opacity}
             reflectivity={0.66}
             roughness={0.18}
+            transparent
           />
         </Text3D>
       </Center>
-      <pointLight color="#76ffbf" distance={4.2} intensity={active ? 1.7 : 0.8} position={[0.7, 0.8, 1.4]} />
-      <pointLight color="#7af8ff" distance={5} intensity={active ? 1.2 : 0.5} position={[-1.2, -0.4, 1.8]} />
+      <pointLight color="#76ffbf" distance={4.2} intensity={(active ? 1.7 : 0.8) * opacity} position={[0.7, 0.8, 1.4]} />
+      <pointLight color="#7af8ff" distance={5} intensity={(active ? 1.2 : 0.5) * opacity} position={[-1.2, -0.4, 1.8]} />
     </group>
   );
 }

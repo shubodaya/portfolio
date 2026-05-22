@@ -37,6 +37,10 @@ export function ScrollExperience({ hero, profile: profileContent = profile, rout
         </SceneSection>
       ))}
       <section className="story-section story-section--outro" data-scene-section id="outro" aria-label="S outro">
+        <div className="outro-message">
+          <p>Network security, infrastructure support, and technical troubleshooting.</p>
+          <strong>{profileContent.email}</strong>
+        </div>
         <nav className="outro-contact-panel" aria-label="Contact links">
           {outroLinks.map(({ href, kind, label }) => (
             <a

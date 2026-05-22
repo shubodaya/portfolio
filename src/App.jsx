@@ -2,14 +2,61 @@ import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, useMotionValueEvent, useScroll } from "framer-motion";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { AdminPortal } from "./twod/AdminPortal.jsx";
-import { LoaderIntro } from "./components/LoaderIntro.jsx";
+import { LogoIntro } from "./components/LogoIntro.jsx";
 import { Nav } from "./components/Nav.jsx";
 import Scene3D from "./components/Scene3D.jsx";
 import { ScrollExperience } from "./components/ScrollExperience.jsx";
 import { SmoothScroll } from "./components/SmoothScroll.jsx";
+import { getFibreFocusScene, getFibreSignalProgress } from "./components/FibreCable.jsx";
 import { profile } from "./data/profileData.js";
 import { SiteContentProvider, useSiteContentData } from "./twod/SiteContentContext.jsx";
 import { TwoDPortfolio } from "./twod/TwoDPortfolio.jsx";
+
+const clamp01 = (value) => Math.max(0, Math.min(1, value));
+
+function linearProgress(value, start, end) {
+  return clamp01((value - start) / Math.max(0.0001, end - start));
+}
+
+const scrollSceneToRouteScene = {
+  hero: "hero",
+  about: "highlights",
+  experience: "highlights",
+  projects: "projects",
+  skills: "catalog",
+  certifications: "catalog",
+  education: "catalog",
+  contact: "contact"
+};
+
+function getScrollNavScene(activeScene, scrollProgress) {
+  if (scrollProgress <= 0.104 || scrollProgress >= 0.895) return activeScene;
+
+  const tileScene = getFibreFocusScene(getFibreSignalProgress(scrollProgress), "hero");
+
+  return scrollSceneToRouteScene[tileScene] ?? activeScene;
+}
+
+function JourneyShutter({ scrollProgress }) {
+  const intro = linearProgress(scrollProgress, 0.018, 0.098);
+  const outro = linearProgress(scrollProgress, 0.91, 0.97);
+  const introActive = intro > 0 && intro < 1;
+  const outroActive = outro > 0 && outro < 1;
+
+  if (!introActive && !outroActive) return null;
+
+  const active = introActive ? intro : outro;
+  const direction = introActive ? 1 : -1;
+  const y = direction === 1 ? -62 + active * 124 : 62 - active * 124;
+  const opacity = Math.sin(active * Math.PI);
+
+  return (
+    <div className="journey-shutter" aria-hidden="true" style={{ "--shutter-y": `${y}vh`, opacity }}>
+      <span className="journey-shutter__blade" />
+      <span className="journey-shutter__afterglow" />
+    </div>
+  );
+}
 
 function useActiveScene() {
   const [activeScene, setActiveScene] = useState("hero");
@@ -44,6 +91,7 @@ function HomeExperienceContent() {
   const [hoveredScene, setHoveredScene] = useState(null);
   const [activeProject, setActiveProject] = useState("netravax");
   const activeScene = useActiveScene();
+  const navScene = getScrollNavScene(activeScene, scrollProgress);
   const completeIntro = useCallback(() => setIntroComplete(true), []);
 
   useMotionValueEvent(scrollYProgress, "change", setScrollProgress);
@@ -60,10 +108,11 @@ function HomeExperienceContent() {
         setHoveredScene={setHoveredScene}
         threeDContent={threeDContent}
       />
+      <JourneyShutter scrollProgress={scrollProgress} />
 
-      <Nav activeScene={activeScene} onHoverScene={setHoveredScene} routeNodes={threeDContent.sections} />
+      <Nav activeScene={navScene} onHoverScene={setHoveredScene} routeNodes={threeDContent.sections} />
       <AnimatePresence>
-        {!introComplete ? <LoaderIntro onComplete={completeIntro} /> : null}
+        {!introComplete ? <LogoIntro onComplete={completeIntro} /> : null}
       </AnimatePresence>
 
       <ScrollExperience

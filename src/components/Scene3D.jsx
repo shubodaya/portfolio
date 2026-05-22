@@ -4,10 +4,20 @@ import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
-import { profile, sceneOrder } from "../data/profileData.js";
+import { sceneOrder } from "../data/profileData.js";
 import { defaultThreeDContent } from "../data/threeDContent.js";
-import { FibreCable, SECTION_STOPS, createFibreCurve, getCurvePoint, getSceneIndex } from "./FibreCable.jsx";
-import { PacketLights } from "./PacketLights.jsx";
+import {
+  FIBRE_BRANCH_RELEASE,
+  FIBRE_TILE_SCENES,
+  FibreCable,
+  SECTION_STOPS,
+  createFibreCurve,
+  getCurvePoint,
+  getFibreFocusScene,
+  getFibreSignalProgress,
+  getFibreTileState,
+  getSceneIndex
+} from "./FibreCable.jsx";
 import { SMark3D } from "./SMark3D.jsx";
 
 const COLORS = {
@@ -17,47 +27,82 @@ const COLORS = {
   amber: "#f4c86a"
 };
 
+function noise01(index, salt = 0) {
+  return Math.sin(index * 19.47 + salt * 4.13) * 0.5 + 0.5;
+}
+
 const sectionColors = {
   hero: COLORS.mint,
-  services: COLORS.cyan,
-  highlights: COLORS.amber,
+  about: COLORS.amber,
+  experience: COLORS.cyan,
   projects: COLORS.violet,
-  "role-pages": COLORS.mint,
-  insights: COLORS.cyan,
+  skills: COLORS.violet,
+  certifications: COLORS.mint,
+  education: COLORS.cyan,
   contact: COLORS.mint,
-  catalog: COLORS.violet,
-  resume: COLORS.amber,
   outro: COLORS.mint
 };
 
 const defaultTileImages = {
   hero: "/assets/portfolio/serverblue.png",
-  services: "/assets/portfolio/serverblue.png",
-  highlights: "/assets/portfolio/story-security.png",
+  about: "/assets/portfolio/story-security.png",
+  experience: "/assets/projects/hero-command.jpg",
   projects: "/assets/portfolio/netravax.png",
-  "role-pages": "/assets/projects/site-network-browser.png",
-  insights: "/assets/projects/site-blog-browser.png",
+  skills: "/assets/projects/site-security-browser.png",
+  certifications: "/assets/projects/site-security-browser.png",
+  education: "/assets/portfolio/story-security.png",
   contact: "/assets/portfolio/serverblue.png",
-  catalog: "/assets/projects/site-security-browser.png",
-  resume: "/assets/projects/hero-command.jpg",
   outro: "/assets/portfolio/serverblue.png"
 };
 
-const tileLinks = {
-  services: "/services",
-  highlights: "/highlights",
+const internalRoutes = {
+  hero: "/",
+  about: "/about",
+  experience: "/experience",
   projects: "/featured-projects",
-  "role-pages": "/role-pages",
-  insights: "/insights",
-  contact: "/contact",
-  catalog: "/catalog",
-  resume: profile.links.resume
+  skills: "/skills",
+  certifications: "/certifications",
+  education: "/education",
+  contact: "/contact"
 };
 
-const getSectionRoute = (threeDContent, scene) => {
-  if (scene === "resume") return threeDContent.profile?.links?.resume ?? profile.links.resume;
-  return threeDContent.sections?.find((section) => section.id === scene)?.path ?? tileLinks[scene];
+const getSectionRoute = (_threeDContent, scene) => internalRoutes[scene];
+
+const tileSceneOrder = FIBRE_TILE_SCENES;
+
+const INTRO_SHUTTER = {
+  start: 0.018,
+  finish: 0.098,
+  fibreStart: 0.104,
+  fibreReady: 0.135
 };
+
+const OUTRO_SHUTTER = {
+  fibreFadeStart: 0.895,
+  fibreFadeEnd: 0.952,
+  logoStart: 0.956,
+  logoReady: 0.985
+};
+
+function getFibrePresence(scrollProgress) {
+  const intro = THREE.MathUtils.smoothstep(scrollProgress, INTRO_SHUTTER.fibreStart, INTRO_SHUTTER.fibreReady);
+  const outro = 1 - THREE.MathUtils.smoothstep(scrollProgress, OUTRO_SHUTTER.fibreFadeStart, OUTRO_SHUTTER.fibreFadeEnd);
+  return THREE.MathUtils.clamp(intro * outro, 0, 1);
+}
+
+function getHeroLogoPresence(scrollProgress) {
+  return 1 - THREE.MathUtils.smoothstep(scrollProgress, INTRO_SHUTTER.start, INTRO_SHUTTER.finish);
+}
+
+function getOutroLogoPresence(scrollProgress) {
+  return THREE.MathUtils.smoothstep(scrollProgress, OUTRO_SHUTTER.logoStart, OUTRO_SHUTTER.logoReady);
+}
+
+function getVisualScene(activeScene, scrollProgress) {
+  if (scrollProgress > OUTRO_SHUTTER.fibreFadeStart) return "outro";
+  if (scrollProgress > INTRO_SHUTTER.fibreStart) return getFibreFocusScene(getFibreSignalProgress(scrollProgress), "hero");
+  return activeScene;
+}
 
 function useDisplayPrefs() {
   const [prefs, setPrefs] = useState({ compact: false, reduceMotion: false });
@@ -91,30 +136,57 @@ function vectorFrom(point, offset) {
   return new THREE.Vector3(point.x + offset[0], point.y + offset[1], point.z + offset[2]);
 }
 
-function tileOffsetFor(scene, compact) {
-  const x = compact ? 1.18 : 3.55;
-  const z = compact ? 1.72 : 1.95;
-  const offsets = {
-    hero: [0, 0, 0],
-    services: [x, 0.04, z],
-    highlights: [-x, -0.02, z],
-    projects: [x, 0.02, z],
-    "role-pages": [-x, 0.02, z],
-    insights: [x, 0.02, z],
-    contact: [-x, compact ? -0.02 : -0.04, z],
-    catalog: [x, 0.02, z],
-    resume: [-x, 0, z],
-    outro: [0, 0, 0]
-  };
+function updateTubeDrawRange(mesh, reveal) {
+  if (!mesh?.geometry) return;
+  const count = mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count;
+  mesh.geometry.setDrawRange(0, Math.max(1, Math.floor(count * reveal)));
+}
 
-  return offsets[scene] ?? [0, 0, 0.12];
+const focusAngles = {
+  hero: 1.32,
+  about: 2.28,
+  experience: 0.86,
+  projects: 2.48,
+  skills: 0.68,
+  certifications: 2.2,
+  education: 0.96,
+  contact: 2.42
+};
+
+function getTilePosition(curve, scene, compact, scrollProgress) {
+  const branchProgress = getFibreTileState(scene, scrollProgress).progress;
+  const anchor = scene === "outro" ? getCurvePoint(curve, scene) : curve.getPointAt(branchProgress);
+  if (scene === "outro") return anchor.clone();
+
+  const sectionStop = branchProgress;
+  const radius = compact ? 2.72 : 4.68;
+  const orbitSpeed = compact ? 3.4 : 5.15;
+  const focusAngle = focusAngles[scene] ?? 1.15;
+  const angle = focusAngle + (scrollProgress - sectionStop) * orbitSpeed;
+
+  return new THREE.Vector3(
+    anchor.x + Math.cos(angle) * radius,
+    anchor.y,
+    anchor.z + Math.sin(angle) * radius
+  );
+}
+
+function getTileFaceYaw(position, compact) {
+  const cameraZ = compact ? 11.65 : 14.55;
+  const toCamera = new THREE.Vector3(-position.x, 0, cameraZ - position.z);
+  return Math.atan2(toCamera.x, toCamera.z);
 }
 
 function connectorPointFor(position, compact, content) {
-  const side = position.x >= 0 ? -1 : 1;
-  const { width, scale } = getTileMetrics({ compact, ...content });
-  const edgeDistance = (width * scale) / 2 - (compact ? 0.06 : 0.1);
-  return position.clone().add(new THREE.Vector3(side * edgeDistance, compact ? -0.04 : -0.06, 0.16));
+  const { height, width, scale } = getTileMetrics({ compact, ...content });
+  const radial = new THREE.Vector3(position.x, 0, position.z);
+  if (radial.lengthSq() < 0.001) {
+    radial.set(position.x >= 0 ? 1 : -1, 0, 0);
+  }
+  radial.normalize();
+  const edgeDistance = (width * scale) / 2 - (compact ? 0.08 : 0.16);
+  const portY = (-height / 2 + (compact ? 0.44 : 0.58)) * scale;
+  return position.clone().add(radial.multiplyScalar(-edgeDistance)).add(new THREE.Vector3(0, portY, 0.02));
 }
 
 function CameraRig({ activeScene, compact, curve, scrollProgress }) {
@@ -122,153 +194,132 @@ function CameraRig({ activeScene, compact, curve, scrollProgress }) {
   const look = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(({ camera, pointer }, delta) => {
-    const activeStop = SECTION_STOPS[activeScene] ?? scrollProgress;
-    const travel = THREE.MathUtils.clamp(THREE.MathUtils.lerp(scrollProgress, activeStop, 0.2), 0.02, 0.966);
+    const fibreProgress = getFibreSignalProgress(scrollProgress);
+    const activeStop = getFibreTileState(activeScene, fibreProgress).progress ?? SECTION_STOPS[activeScene] ?? fibreProgress;
+    const travel = THREE.MathUtils.clamp(THREE.MathUtils.lerp(fibreProgress, activeStop, 0.2), 0.02, 0.966);
     const point = curve.getPointAt(travel);
-    const lookPoint = curve.getPointAt(Math.min(0.99, travel + 0.05));
-    const tilePoint = vectorFrom(getCurvePoint(curve, activeScene), tileOffsetFor(activeScene, compact));
-    const side = tileOffsetFor(activeScene, compact)[0] >= 0 ? 1 : -1;
+    const tilePoint = getTilePosition(curve, activeScene, compact, fibreProgress);
+    const cameraZ = compact ? 11.65 : 14.55;
 
-    if (activeScene === "hero") {
-      desired.set(pointer.x * (compact ? 0.1 : 0.2), 0.5 + pointer.y * 0.14, compact ? 9.4 : 10.25);
-      look.set(0, 0.1, 5.76);
+    if (activeScene === "hero" && scrollProgress < INTRO_SHUTTER.fibreStart) {
+      const heroPoint = getCurvePoint(curve, "hero");
+      desired.set(pointer.x * (compact ? 0.08 : 0.14), heroPoint.y + 0.48 + pointer.y * 0.12, cameraZ + 0.62);
+      look.copy(heroPoint).add(new THREE.Vector3(0, compact ? 0.08 : 0.12, 0));
     } else if (activeScene === "outro") {
       const outroPoint = getCurvePoint(curve, "outro");
-      desired.set(pointer.x * (compact ? 0.1 : 0.18), outroPoint.y + 0.5 + pointer.y * 0.14, outroPoint.z + (compact ? 5.6 : 6.4));
-      look.copy(outroPoint).add(new THREE.Vector3(0, compact ? 0.3 : 0.42, 0.65));
+      desired.set(pointer.x * (compact ? 0.08 : 0.14), outroPoint.y + 0.5 + pointer.y * 0.12, cameraZ + 0.48);
+      look.copy(outroPoint).add(new THREE.Vector3(0, compact ? 0.16 : 0.22, 0));
     } else {
       if (compact) {
-        desired.set(tilePoint.x * 0.53 + pointer.x * 0.07, point.y + 0.42 + pointer.y * 0.07, point.z + 7.05);
-        look.copy(tilePoint).add(new THREE.Vector3(0, 0.04, 0));
+        desired.set(tilePoint.x * 0.16 + pointer.x * 0.04, point.y + 0.32 + pointer.y * 0.05, cameraZ);
+        look.copy(point).lerp(tilePoint, 0.44).add(new THREE.Vector3(0, 0.02, 0.04));
       } else {
-        desired.set(point.x + side * 1.05 + pointer.x * 0.22, point.y + 0.62 + pointer.y * 0.22, point.z + 5.75);
-        look.copy(lookPoint).lerp(tilePoint, 0.54);
+        desired.set(tilePoint.x * 0.18 + pointer.x * 0.07, point.y + 0.5 + pointer.y * 0.08, cameraZ);
+        look.copy(point).lerp(tilePoint, 0.42).add(new THREE.Vector3(0, 0.04, 0.04));
       }
     }
-    look.y += compact ? 0.1 : 0.16;
+    look.y += compact ? 0.02 : 0.04;
 
     const ease = 1 - Math.pow(0.001, delta);
-    camera.position.lerp(desired, ease * 0.14);
+    camera.position.lerp(desired, ease * 0.3);
     camera.lookAt(look);
-    camera.fov = THREE.MathUtils.lerp(camera.fov, activeScene === "hero" ? (compact ? 50 : 42) : compact ? 47 : 42, 0.04);
+    camera.fov = THREE.MathUtils.lerp(camera.fov, activeScene === "hero" && scrollProgress < INTRO_SHUTTER.fibreStart ? (compact ? 52 : 46) : compact ? 48 : 42, 0.06);
     camera.updateProjectionMatrix();
   });
 
   return null;
 }
 
-function BranchCable({ active, color = COLORS.cyan, curve, fromT, to, visible = true }) {
+function BranchCable({ activation = 0, branchTravel = 0, color = COLORS.cyan, curve, fromT, to, visible = true }) {
   const coreRef = useRef(null);
   const glowRef = useRef(null);
   const endpointRef = useRef(null);
-  const packetRefs = useRef([]);
+  const packetRef = useRef(null);
+  const packetGlowRef = useRef(null);
   const branchCurve = useMemo(() => {
     const start = curve.getPointAt(fromT);
     const end = to.clone();
-    const side = end.x >= start.x ? 1 : -1;
-    const midA = start.clone().add(new THREE.Vector3(side * 0.42, 0.03, 0.22));
-    const midB = end.clone().add(new THREE.Vector3(-side * 0.34, 0.08, -0.18));
+    const radial = end.clone().sub(start);
+    radial.y = 0;
+    if (radial.lengthSq() < 0.001) radial.set(end.x >= start.x ? 1 : -1, 0, 0);
+    radial.normalize();
+    const midA = start.clone().add(radial.clone().multiplyScalar(0.72)).add(new THREE.Vector3(0, -0.12, 0));
+    const midB = end.clone().add(radial.clone().multiplyScalar(-0.5)).add(new THREE.Vector3(0, 0.1, 0));
     return new THREE.CatmullRomCurve3([start, midA, midB, end]);
   }, [curve, fromT, to]);
 
   useFrame(({ clock }) => {
-    const signal = active ? 1 : 0;
+    const signal = visible ? THREE.MathUtils.clamp(activation, 0, 1) : 0;
+    const travel = THREE.MathUtils.clamp(branchTravel, 0, 1);
     const pulse = signal * (0.07 + Math.sin(clock.elapsedTime * 4 + fromT * 10) * 0.025);
+    const endpointSignal = signal * THREE.MathUtils.smoothstep(travel, 0.76, 1);
+    const packetSignal = signal * Math.sin(Math.min(1, travel) * Math.PI);
+    updateTubeDrawRange(glowRef.current, Math.max(0.015, travel));
+    updateTubeDrawRange(coreRef.current, Math.max(0.015, travel));
+
     if (coreRef.current) {
-      coreRef.current.material.opacity = THREE.MathUtils.lerp(coreRef.current.material.opacity, visible ? (active ? 0.58 : 0.08) : 0, 0.08);
-      coreRef.current.material.emissiveIntensity = THREE.MathUtils.lerp(coreRef.current.material.emissiveIntensity, active ? 0.84 : 0.12, 0.08);
+      coreRef.current.material.opacity = THREE.MathUtils.lerp(coreRef.current.material.opacity, signal * 0.54, 0.1);
+      coreRef.current.material.emissiveIntensity = THREE.MathUtils.lerp(coreRef.current.material.emissiveIntensity, 0.08 + signal * 0.8, 0.1);
     }
     if (glowRef.current) {
-      glowRef.current.material.opacity = THREE.MathUtils.lerp(glowRef.current.material.opacity, visible ? (active ? 0.22 + pulse : 0.025) : 0, 0.08);
+      glowRef.current.material.opacity = THREE.MathUtils.lerp(glowRef.current.material.opacity, signal * (0.11 + pulse * 0.72), 0.1);
     }
     if (endpointRef.current) {
-      endpointRef.current.material.opacity = THREE.MathUtils.lerp(endpointRef.current.material.opacity, visible ? (active ? 0.34 + pulse : 0.05) : 0, 0.08);
-      endpointRef.current.scale.setScalar(THREE.MathUtils.lerp(endpointRef.current.scale.x, active ? 1.12 + pulse : 0.72, 0.08));
+      endpointRef.current.material.opacity = THREE.MathUtils.lerp(endpointRef.current.material.opacity, endpointSignal * (0.34 + pulse), 0.1);
+      endpointRef.current.scale.setScalar(THREE.MathUtils.lerp(endpointRef.current.scale.x, endpointSignal ? 1.12 + pulse : 0.72, 0.1));
     }
-    packetRefs.current.forEach((packet, index) => {
+
+    [packetRef.current, packetGlowRef.current].forEach((packet, index) => {
       if (!packet) return;
-      const t = (clock.elapsedTime * 0.42 + index * 0.28 + fromT) % 1;
-      const point = branchCurve.getPointAt(t);
+      const point = branchCurve.getPointAt(Math.max(0.001, travel));
       packet.position.copy(point);
-      packet.material.opacity = THREE.MathUtils.lerp(packet.material.opacity, visible && active ? 0.75 * (0.4 + t) : 0, 0.12);
-      packet.scale.setScalar(THREE.MathUtils.lerp(packet.scale.x, active ? 0.7 + t * 0.5 : 0.2, 0.12));
+      packet.material.opacity = THREE.MathUtils.lerp(packet.material.opacity, packetSignal * (index === 0 ? 0.9 : 0.24), 0.14);
+      packet.scale.setScalar(THREE.MathUtils.lerp(packet.scale.x, packetSignal ? 0.72 + travel * (index === 0 ? 0.42 : 0.86) : 0.2, 0.14));
     });
   });
 
   return (
     <>
       <mesh ref={glowRef}>
-        <tubeGeometry args={[branchCurve, 42, 0.038, 8, false]} />
+        <tubeGeometry args={[branchCurve, 42, 0.018, 8, false]} />
         <meshBasicMaterial color={color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
       <mesh ref={coreRef}>
-        <tubeGeometry args={[branchCurve, 42, 0.012, 8, false]} />
+        <tubeGeometry args={[branchCurve, 42, 0.006, 8, false]} />
         <meshStandardMaterial color="#061113" emissive={color} emissiveIntensity={0.2} metalness={0.5} opacity={0} roughness={0.22} transparent />
       </mesh>
       <mesh ref={endpointRef} position={to}>
         <boxGeometry args={[0.2, 0.075, 0.038]} />
         <meshBasicMaterial color={color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
-      {[0, 1, 2].map((index) => (
-        <mesh
-          key={index}
-          ref={(node) => {
-            if (node) packetRefs.current[index] = node;
-          }}
-        >
-          <sphereGeometry args={[0.035 + index * 0.004, 12, 12]} />
-          <meshBasicMaterial color={index === 1 ? "#ffffff" : color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
-        </mesh>
-      ))}
+      <mesh ref={packetGlowRef}>
+        <sphereGeometry args={[0.076, 14, 14]} />
+        <meshBasicMaterial color={color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+      <mesh ref={packetRef}>
+        <sphereGeometry args={[0.038, 14, 14]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
     </>
   );
 }
 
 function ScrollReactiveBackground({ activeScene, compact, scrollProgress }) {
   const groupRef = useRef(null);
-  const lineGeometry = useMemo(() => {
-    const positions = [];
-    const nodes = [];
-    const depth = compact ? 19 : 31;
-    const nodeCount = compact ? 22 : 42;
-
-    for (let index = 0; index < nodeCount; index += 1) {
-      const t = index / Math.max(1, nodeCount - 1);
-      const side = index % 2 === 0 ? -1 : 1;
-      const lane = Math.floor(index / 2) % 4;
-      nodes.push(
-        new THREE.Vector3(
-          side * (compact ? 1.68 : 3.15) + Math.sin(index * 1.73) * (compact ? 0.34 : 0.9),
-          Math.sin(index * 0.91) * (compact ? 1.05 : 1.8) + (0.5 - t) * (compact ? 1.05 : 1.8),
-          6.6 - t * depth - lane * 0.18
-        )
-      );
-    }
-
-    nodes.forEach((node, index) => {
-      const next = nodes[index + 2];
-      const skip = nodes[index + 6];
-      if (next) positions.push(node.x, node.y, node.z, next.x, next.y, next.z);
-      if (skip && index % 3 === 0) positions.push(node.x, node.y, node.z, skip.x, skip.y, skip.z);
-    });
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    return geometry;
-  }, [compact]);
   const pointsGeometry = useMemo(() => {
     const positions = [];
-    const depth = compact ? 19 : 31;
-    const nodeCount = compact ? 22 : 42;
+    const nodeCount = compact ? 18 : 30;
+    const yTop = compact ? 5.3 : 6.2;
+    const yBottom = compact ? -15.2 : -18.1;
 
     for (let index = 0; index < nodeCount; index += 1) {
       const t = index / Math.max(1, nodeCount - 1);
-      const side = index % 2 === 0 ? -1 : 1;
-      const lane = Math.floor(index / 2) % 4;
+      const angle = index * 1.72;
+      const radius = (compact ? 2.15 : 4.2) + noise01(index, 2) * (compact ? 0.9 : 1.8);
       positions.push(
-        side * (compact ? 1.68 : 3.15) + Math.sin(index * 1.73) * (compact ? 0.34 : 0.9),
-        Math.sin(index * 0.91) * (compact ? 1.05 : 1.8) + (0.5 - t) * (compact ? 1.05 : 1.8),
-        6.6 - t * depth - lane * 0.18
+        Math.cos(angle) * radius,
+        THREE.MathUtils.lerp(yTop, yBottom, t) + Math.sin(index * 0.9) * (compact ? 0.16 : 0.34),
+        Math.sin(angle) * radius * 0.72
       );
     }
 
@@ -276,68 +327,29 @@ function ScrollReactiveBackground({ activeScene, compact, scrollProgress }) {
     geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
     return geometry;
   }, [compact]);
-  const routeGeometry = useMemo(() => {
-    const positions = [];
-    const width = compact ? 5.1 : 8.8;
-    const height = compact ? 2.35 : 3.8;
-    const depth = compact ? 20 : 34;
-    const rows = compact ? 4 : 7;
-    const cols = compact ? 4 : 7;
-
-    for (let row = 0; row < rows; row += 1) {
-      const t = row / Math.max(1, rows - 1);
-      const y = -height / 2 + t * height + Math.sin(row * 1.7) * 0.08;
-      const z = 5.5 - t * depth;
-      positions.push(-width / 2, y, z, width / 2, y, z - 0.8);
-    }
-
-    for (let col = 0; col < cols; col += 1) {
-      const t = col / Math.max(1, cols - 1);
-      const x = -width / 2 + t * width;
-      const z = 5.2 - t * depth * 0.75;
-      positions.push(x, -height / 2, z, x + Math.sin(col) * 0.4, height / 2, z - 5.2);
-    }
-
-    for (let index = 0; index < rows - 1; index += 1) {
-      const z = 4.8 - index * (depth / rows);
-      positions.push(-width / 2, -height / 2 + index * 0.52, z, -width / 6, 0.2, z - 1.4);
-      positions.push(width / 6, -0.18, z - 0.6, width / 2, height / 2 - index * 0.42, z - 2.2);
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    return geometry;
-  }, [compact]);
-
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const section = getSceneIndex(activeScene);
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, (scrollProgress - 0.5) * 0.18, 0.035);
-    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, Math.sin(scrollProgress * Math.PI * 2) * 0.28, 0.04);
-    groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, -scrollProgress * 1.2, 0.04);
+    groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, scrollProgress * Math.PI * 0.16, 0.035);
+    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, Math.sin(scrollProgress * Math.PI * 2) * 0.12, 0.04);
+    groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, 0, 0.04);
     groupRef.current.children.forEach((child, index) => {
       if (child.material) {
         const outroFade = activeScene === "outro" ? 0.22 : 1;
-        child.material.opacity = outroFade * (0.055 + Math.sin(clock.elapsedTime * 0.8 + section + index) * 0.018);
+        child.material.opacity = outroFade * (0.028 + Math.sin(clock.elapsedTime * 0.8 + section + index) * 0.01);
       }
     });
   });
 
   return (
-    <group ref={groupRef} position={[0, 0, -1.2]}>
-      <lineSegments geometry={lineGeometry}>
-        <lineBasicMaterial color={sectionColors[activeScene] ?? COLORS.cyan} transparent opacity={0.06} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </lineSegments>
-      <lineSegments geometry={routeGeometry} position={[0, compact ? 0.2 : 0.38, -0.85]}>
-        <lineBasicMaterial color={sectionColors[activeScene] ?? COLORS.cyan} transparent opacity={0.045} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </lineSegments>
+    <group ref={groupRef}>
       <points geometry={pointsGeometry}>
         <pointsMaterial
           color="#7af8ff"
           size={compact ? 0.035 : 0.05}
           sizeAttenuation
           transparent
-          opacity={0.09}
+          opacity={0.045}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
         />
@@ -471,13 +483,64 @@ function SectionGate({ activeScene, compact, curve, scrollProgress }) {
           ref={(node) => {
             if (node) ringRefs.current[index] = node;
           }}
-          rotation={[index * 0.44, index * 0.22, 0]}
+          rotation={[Math.PI / 2 + index * 0.16, index * 0.22, 0]}
         >
           <torusGeometry args={[compact ? 0.28 + index * 0.09 : 0.36 + index * 0.12, 0.006, 8, 64]} />
           <meshBasicMaterial color={color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
         </mesh>
       ))}
       <pointLight color={color} distance={compact ? 2.4 : 3.4} intensity={0} ref={lightRef} />
+    </group>
+  );
+}
+
+function LogoFibreEmission({ compact, curve, scrollProgress }) {
+  const refs = useRef([]);
+  const particles = useMemo(
+    () =>
+      Array.from({ length: compact ? 18 : 30 }, (_, index) => ({
+        color: index % 4 === 0 ? COLORS.cyan : index % 3 === 0 ? COLORS.amber : COLORS.mint,
+        offset: new THREE.Vector3(
+          Math.sin(index * 2.13) * (compact ? 0.055 : 0.09),
+          Math.cos(index * 1.71) * (compact ? 0.045 : 0.075),
+          Math.sin(index * 0.87) * 0.08
+        ),
+        phase: index / Math.max(1, (compact ? 18 : 30) - 1),
+        size: (compact ? 0.018 : 0.026) + (index % 5) * 0.003
+      })),
+    [compact]
+  );
+
+  useFrame(({ clock }) => {
+    const appear = THREE.MathUtils.smoothstep(scrollProgress, 0.012, 0.12);
+    const fade = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.22, 0.38);
+    const presence = appear * fade;
+
+    refs.current.forEach((node, index) => {
+      if (!node) return;
+      const particle = particles[index];
+      const localTravel = THREE.MathUtils.clamp(scrollProgress * 1.7 + particle.phase * 0.12, 0.005, 0.22);
+      const point = curve.getPointAt(localTravel);
+      const shimmer = 0.5 + Math.sin(clock.elapsedTime * 3.2 + index * 0.7) * 0.5;
+      node.position.copy(point).add(particle.offset.clone().multiplyScalar(1 - localTravel * 2.5));
+      node.scale.setScalar(THREE.MathUtils.lerp(node.scale.x, presence * (0.55 + shimmer * 0.75), 0.12));
+      node.material.opacity = THREE.MathUtils.lerp(node.material.opacity, presence * (0.12 + shimmer * 0.42), 0.1);
+    });
+  });
+
+  return (
+    <group>
+      {particles.map((particle, index) => (
+        <mesh
+          key={`logo-emission-${index}`}
+          ref={(node) => {
+            if (node) refs.current[index] = node;
+          }}
+        >
+          <sphereGeometry args={[particle.size, 10, 10]} />
+          <meshBasicMaterial color={particle.color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -502,85 +565,109 @@ function getTileTypography(typography = {}) {
 }
 
 function getTileMetrics({ body, compact, lines = [], scene, title, typography }) {
-  const isHero = scene === "hero";
   const { bodyScale } = getTileTypography(typography);
   const safeTitle = String(title ?? "");
   const longTitle = safeTitle.length > 48 || safeTitle.includes("\n");
-  const estimatedLines = estimateTileLines([body, ...lines], compact);
-  const dense = estimatedLines > (compact ? 8 : 9);
-  const heightScale = Math.max(0, bodyScale - 1) * (compact ? 0.16 : 0.26);
+  const estimatedLines = estimateTileLines(lines, compact) + Math.max(1, Math.ceil(String(body ?? "").length / (compact ? 26 : 56)));
+  const dense = estimatedLines > (compact ? 7 : 8);
+  const heightScale = Math.max(0, bodyScale - 1) * (compact ? 0.18 : 0.32);
 
   return {
     dense,
-    height: compact ? (dense ? 2.96 : 2.24) + heightScale : isHero ? 2.04 : (dense ? 3.18 : 2.5) + heightScale,
+    height: compact ? (dense ? 3.28 : 2.92) + heightScale : (dense ? 3.82 : 3.48) + heightScale,
     longTitle,
-    scale: isHero ? 0.96 : compact ? 0.9 : 1.14,
-    width: compact ? (dense ? 3.2 : 2.9) : isHero ? 3.4 : dense ? 4.74 : 4.02
+    scale: compact ? 0.78 : 0.84,
+    width: compact ? (dense ? 3.38 : 3.16) : dense ? 6.12 : 5.68
   };
 }
 
-function ContentTile3D({ active, body, color, compact, href, icon, image, kicker, lines = [], navigate, position, scene, side = 1, title, typography }) {
+function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href, icon, image, kicker, lines = [], navigate, position, presence = 1, scene, side = 1, title, typography }) {
   const groupRef = useRef(null);
   const panelRef = useRef(null);
   const glowRef = useRef(null);
-  const isHero = scene === "hero";
+  const isHero = false;
   const { bodyScale, kickerScale, lineHeightScale, titleScale } = getTileTypography(typography);
   const { dense, height, longTitle, scale: activeScale, width } = getTileMetrics({ body, compact, lines, scene, title, typography });
-  const titleSize = (compact ? (longTitle ? 0.112 : 0.145) : isHero ? 0.17 : longTitle ? 0.158 : dense ? 0.205 : 0.235) * titleScale;
-  const bodySize = (compact ? (dense ? 0.064 : 0.071) : dense ? 0.096 : 0.102) * bodyScale;
-  const bodyLineHeight = (compact ? 1.2 : 1.18) * lineHeightScale;
-  const kickerSize = (compact ? 0.074 : isHero ? 0.078 : dense ? 0.078 : 0.09) * kickerScale;
-  const bodyOffset = compact ? (dense ? 1.08 : longTitle ? 1.08 : 1) : dense ? 1.08 : longTitle ? 1.22 : 1.04;
-  const bodyText = [body, ...lines].filter(Boolean).join("\n");
+  const titleSize = (compact ? (longTitle ? 0.112 : 0.148) : isHero ? 0.17 : longTitle ? 0.17 : dense ? 0.235 : 0.265) * titleScale;
+  const subtitleSize = (compact ? 0.071 : dense ? 0.105 : 0.112) * bodyScale;
+  const bulletSize = (compact ? (dense ? 0.061 : 0.066) : dense ? 0.089 : 0.096) * bodyScale;
+  const bodyLineHeight = (compact ? 1.3 : 1.36) * lineHeightScale;
+  const kickerSize = (compact ? 0.074 : isHero ? 0.078 : dense ? 0.082 : 0.094) * kickerScale;
+  const bulletText = lines.filter(Boolean).join("\n");
+  const leftBulletText = compact ? bulletText : lines.filter(Boolean).slice(0, Math.ceil(lines.length / 2)).join("\n");
+  const rightBulletText = compact ? "" : lines.filter(Boolean).slice(Math.ceil(lines.length / 2)).join("\n");
   const portX = position.x >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
+  const portY = -height / 2 + (compact ? 0.44 : 0.58);
   const hasIcon = Boolean(icon);
-  const logoReserve = hasIcon ? (compact ? 0.68 : 0.88) : 0;
-  const titleTop = height / 2 - (compact ? 0.36 : 0.42);
-  const bodyX = -width / 2 + 0.24;
-  const bodyMaxWidth = width - (compact ? 0.78 : 0.86);
+  const logoReserve = hasIcon ? (compact ? 0.72 : 0.96) : 0;
+  const inset = compact ? 0.24 : 0.34;
+  const hasKicker = Boolean(kicker);
+  const titleTop = height / 2 - (compact ? (hasKicker ? 0.38 : 0.28) : hasKicker ? 0.46 : 0.34);
+  const subtitleY = titleTop - (compact ? 0.46 : 0.62);
+  const bulletY = subtitleY - (compact ? 0.56 : 0.68);
+  const bodyX = -width / 2 + inset;
+  const bodyMaxWidth = width - inset * 2 - (compact ? 0.18 : 0.24);
+  const columnGap = compact ? 0 : 0.34;
+  const columnWidth = compact ? bodyMaxWidth : (bodyMaxWidth - columnGap) / 2;
+  const rightColumnX = bodyX + columnWidth + columnGap;
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
-    const targetScale = active ? activeScale : 0.52;
-    groupRef.current.scale.setScalar(THREE.MathUtils.lerp(groupRef.current.scale.x, targetScale, 0.07));
+    const activeAmount = THREE.MathUtils.clamp(activation, 0, 1);
+    const inactiveScale = compact ? 0.34 : 0.34;
+    const targetScale = presence * THREE.MathUtils.lerp(inactiveScale, activeScale, activeAmount);
+    groupRef.current.scale.setScalar(THREE.MathUtils.lerp(groupRef.current.scale.x, targetScale, 0.16));
     groupRef.current.rotation.y = THREE.MathUtils.lerp(
       groupRef.current.rotation.y,
-      side * (active ? -0.12 : -0.2) + pointer.x * 0.035,
-      0.05
+      faceYaw + side * THREE.MathUtils.lerp(0.34, 0.02, activeAmount) + pointer.x * 0.018,
+      0.08
     );
-    groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, pointer.y * -0.025, 0.05);
-    groupRef.current.position.y = position.y + Math.sin(clock.elapsedTime * 1.1 + position.x) * 0.015;
+    groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, pointer.y * -0.018, 0.05);
+    groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, position.x, 0.14);
+    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, position.y + Math.sin(clock.elapsedTime * 1.1 + position.x) * 0.01, 0.14);
+    groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, position.z, 0.14);
 
     if (panelRef.current) {
-      panelRef.current.material.opacity = THREE.MathUtils.lerp(panelRef.current.material.opacity, active ? 0.86 : 0.3, 0.08);
-      panelRef.current.material.emissiveIntensity = THREE.MathUtils.lerp(panelRef.current.material.emissiveIntensity, active ? 0.24 : 0.08, 0.08);
+      panelRef.current.material.opacity = THREE.MathUtils.lerp(panelRef.current.material.opacity, presence * THREE.MathUtils.lerp(0.18, 0.92, activeAmount), 0.08);
+      panelRef.current.material.emissiveIntensity = THREE.MathUtils.lerp(panelRef.current.material.emissiveIntensity, THREE.MathUtils.lerp(0.06, 0.24, activeAmount), 0.08);
     }
     if (glowRef.current) {
-      glowRef.current.material.opacity = THREE.MathUtils.lerp(glowRef.current.material.opacity, active ? 0.18 : 0.04, 0.08);
+      glowRef.current.material.opacity = THREE.MathUtils.lerp(glowRef.current.material.opacity, presence * THREE.MathUtils.lerp(0.018, 0.16, activeAmount), 0.08);
     }
   });
+
+  const activeVisual = activation > 0.08;
 
   return (
     <group
       ref={groupRef}
       position={position}
+      scale={presence * THREE.MathUtils.lerp(compact ? 0.34 : 0.34, activeScale, THREE.MathUtils.clamp(activation, 0, 1))}
       onClick={(event) => {
         event.stopPropagation();
-        if (!href) return;
-        if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) {
-          window.location.href = href;
+        if (!href || presence < 0.18) return;
+        if (href.startsWith("/")) {
+          if (href === "/" && window.location.pathname === "/") {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+          }
+          navigate(href);
           return;
         }
-        navigate(href);
+        window.location.href = href;
       }}
       onPointerOut={() => {
         document.body.style.cursor = "";
       }}
       onPointerOver={(event) => {
         event.stopPropagation();
-        document.body.style.cursor = href ? "pointer" : "";
+        document.body.style.cursor = href && presence >= 0.18 ? "pointer" : "";
       }}
     >
+      <mesh position={[0, 0, 0.14]} renderOrder={8}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
       <RoundedBox ref={panelRef} args={[width, height, 0.07]} radius={0.055} smoothness={6}>
         <meshPhysicalMaterial
           clearcoat={0.8}
@@ -588,7 +675,6 @@ function ContentTile3D({ active, body, color, compact, href, icon, image, kicker
           emissive={color}
           emissiveIntensity={0.1}
           metalness={0.2}
-          opacity={0.55}
           roughness={0.28}
           transparent
         />
@@ -596,26 +682,28 @@ function ContentTile3D({ active, body, color, compact, href, icon, image, kicker
       <RoundedBox ref={glowRef} args={[width + 0.08, height + 0.08, 0.028]} position={[0, 0, -0.05]} radius={0.08} smoothness={6}>
         <meshBasicMaterial color={color} transparent opacity={0.05} blending={THREE.AdditiveBlending} depthWrite={false} />
       </RoundedBox>
-      <TilePhotoLayer active={active} height={height} image={image} width={width} />
-      <TileReadabilityLayer active={active} height={height} width={width} />
-      {hasIcon ? <TileLogoLayer active={active} color={color} compact={compact} icon={icon} titleTop={titleTop} width={width} /> : null}
-      <TileSignalRail active={active} color={color} compact={compact} height={height} lineCount={lines.length} width={width} />
-      <mesh position={[portX, compact ? -0.04 : -0.06, 0.115]} renderOrder={7}>
+      <TilePhotoLayer active={activeVisual} height={height} image={image} width={width} />
+      <TileReadabilityLayer active={activeVisual} height={height} width={width} />
+      {hasIcon ? <TileLogoLayer active={activeVisual} color={color} compact={compact} icon={icon} titleTop={titleTop} width={width} /> : null}
+      <TileSignalRail active={activeVisual} color={color} compact={compact} height={height} lineCount={lines.length} width={width} />
+      <mesh position={[portX, portY, 0.115]} renderOrder={7}>
         <boxGeometry args={[0.18, 0.072, 0.042]} />
-        <meshBasicMaterial color={color} transparent opacity={active ? 0.62 : 0.16} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial color={color} transparent opacity={presence * THREE.MathUtils.lerp(0.16, 0.68, THREE.MathUtils.clamp(activation, 0, 1))} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
-      <Text
-        anchorX="left"
-        anchorY="top"
-        color={color}
-        fontSize={kickerSize}
-        material-depthTest={false}
-        maxWidth={width - 0.34}
-        position={[-width / 2 + 0.18, height / 2 - 0.18, 0.07]}
-        renderOrder={6}
-      >
-        {kicker}
-      </Text>
+      {hasKicker ? (
+        <Text
+          anchorX="left"
+          anchorY="top"
+          color={color}
+          fontSize={kickerSize}
+          material-depthTest={false}
+          maxWidth={width - 0.34}
+          position={[-width / 2 + 0.18, height / 2 - 0.18, 0.07]}
+          renderOrder={6}
+        >
+          {kicker}
+        </Text>
+      ) : null}
       <Text
         anchorX="left"
         anchorY="top"
@@ -634,26 +722,41 @@ function ContentTile3D({ active, body, color, compact, href, icon, image, kicker
         anchorX="left"
         anchorY="top"
         color="#d7e6ea"
-        fontSize={bodySize}
-        lineHeight={bodyLineHeight}
+        fontSize={subtitleSize}
+        lineHeight={1.2}
         material-depthTest={false}
         maxWidth={bodyMaxWidth}
-        position={[bodyX, height / 2 - bodyOffset, 0.07]}
+        position={[bodyX, subtitleY, 0.07]}
         renderOrder={6}
       >
-        {bodyText}
+        {body}
       </Text>
-      {href ? (
+      <Text
+        anchorX="left"
+        anchorY="top"
+        color="#e6f4f6"
+        fontSize={bulletSize}
+        lineHeight={bodyLineHeight}
+        material-depthTest={false}
+        maxWidth={columnWidth}
+        position={[bodyX, bulletY, 0.07]}
+        renderOrder={6}
+      >
+        {leftBulletText}
+      </Text>
+      {rightBulletText ? (
         <Text
-          anchorX="right"
-          anchorY="bottom"
-          color={color}
-          fontSize={compact ? 0.052 : 0.068}
+          anchorX="left"
+          anchorY="top"
+          color="#e6f4f6"
+          fontSize={bulletSize}
+          lineHeight={bodyLineHeight}
           material-depthTest={false}
-          position={[width / 2 - 0.18, -height / 2 + 0.16, 0.08]}
+          maxWidth={columnWidth}
+          position={[rightColumnX, bulletY, 0.07]}
           renderOrder={6}
         >
-          {scene === "resume" ? "OPEN CV" : "OPEN SECTION"}
+          {rightBulletText}
         </Text>
       ) : null}
     </group>
@@ -664,38 +767,43 @@ function makeTileContent(threeDContent) {
   return threeDContent.tiles ?? defaultThreeDContent.tiles;
 }
 
-function RunwayTiles({ activeScene, compact, curve, navigate, threeDContent }) {
+function RunwayTiles({ compact, curve, fibrePresence, fibreProgress, navigate, scrollProgress, threeDContent }) {
   const tileContent = useMemo(() => makeTileContent(threeDContent), [threeDContent]);
-  const positions = useMemo(() => {
-    return Object.fromEntries(sceneOrder.map((scene) => [scene, vectorFrom(getCurvePoint(curve, scene), tileOffsetFor(scene, compact))]));
-  }, [compact, curve]);
+  const focusTileScene = getFibreFocusScene(fibreProgress, "hero");
+  const activeIndex = Math.max(0, tileSceneOrder.indexOf(focusTileScene));
+  const entryPresence = THREE.MathUtils.smoothstep(scrollProgress, 0.108, 0.135);
+  const outroFade = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.875, 0.93);
+  const tileFieldPresence = entryPresence * outroFade * fibrePresence;
 
   return (
-    <group>
-      {sceneOrder.map((scene) => {
-        if (scene === "hero" || scene === "outro") return null;
-        const active = activeScene === scene;
-        const visible = active;
+    <group visible={tileFieldPresence > 0.01}>
+      {tileSceneOrder.map((scene) => {
+        const tileState = getFibreTileState(scene, fibreProgress);
+        const activation = tileFieldPresence * tileState.activation;
+        const sceneIndex = tileSceneOrder.indexOf(scene);
+        const nearby = Math.abs(sceneIndex - activeIndex) <= 1;
+        const branchVisible = tileFieldPresence > 0.08 && tileState.reached && tileState.distance < FIBRE_BRANCH_RELEASE * 1.35 && (activation > 0.01 || nearby);
         const content = tileContent[scene] ?? defaultThreeDContent.tiles[scene];
         if (!content) return null;
         const color = sectionColors[scene] ?? COLORS.mint;
         const href = getSectionRoute(threeDContent, scene);
         const image = content.image || defaultTileImages[scene];
+        const position = getTilePosition(curve, scene, compact, fibreProgress);
+        const faceYaw = getTileFaceYaw(position, compact);
 
         return (
-          <group key={scene} visible={visible}>
-            {scene !== "hero" ? (
-              <BranchCable
-                active={active}
-                color={color}
-                curve={curve}
-                fromT={SECTION_STOPS[scene]}
-                to={connectorPointFor(positions[scene], compact, { ...content, scene })}
-                visible={visible}
-              />
-            ) : null}
+          <group key={scene}>
+            <BranchCable
+              activation={activation}
+              branchTravel={tileState.branchTravel}
+              color={color}
+              curve={curve}
+              fromT={tileState.progress}
+              to={connectorPointFor(position, compact, { ...content, scene })}
+              visible={branchVisible}
+            />
             <ContentTile3D
-              active={active}
+              activation={activation}
               body={content.body}
               color={color}
               compact={compact}
@@ -704,10 +812,12 @@ function RunwayTiles({ activeScene, compact, curve, navigate, threeDContent }) {
               kicker={content.kicker}
               lines={content.lines}
               image={image}
+              faceYaw={faceYaw}
               navigate={navigate}
-              position={positions[scene]}
+              position={position}
+              presence={tileFieldPresence}
               scene={scene}
-              side={sceneOrder.indexOf(scene) % 2 === 0 ? 1 : -1}
+              side={position.x >= 0 ? 1 : -1}
               title={content.title}
               typography={content.typography}
             />
@@ -718,13 +828,25 @@ function RunwayTiles({ activeScene, compact, curve, navigate, threeDContent }) {
   );
 }
 
-function ContactOutroS({ activeScene, compact, curve, scrollProgress }) {
-  const active = activeScene === "outro";
+function ContactOutroS({ activeScene, compact, curve, navigate, scrollProgress }) {
+  const reform = getOutroLogoPresence(scrollProgress);
+  const active = activeScene === "outro" || reform > 0.55;
   const point = useMemo(() => vectorFrom(getCurvePoint(curve, "outro"), [0, compact ? 0.56 : 0.72, 0.54]), [compact, curve]);
 
-  if (activeScene !== "contact" && activeScene !== "outro") return null;
+  if (reform <= 0.01 && activeScene !== "contact" && activeScene !== "outro") return null;
 
-  return <SMark3D active={active} compact={compact} position={point} scale={active ? (compact ? 0.96 : 1.18) : compact ? 0.42 : 0.5} scrollProgress={scrollProgress} />;
+  return (
+    <SMark3D
+      active={active}
+      compact={compact}
+      href={internalRoutes.hero}
+      navigate={navigate}
+      opacity={reform}
+      position={point}
+      scale={active ? (compact ? 0.96 : 1.18) : compact ? 0.42 : 0.5}
+      scrollProgress={scrollProgress}
+    />
+  );
 }
 
 function SceneLights({ activeScene, curve }) {
@@ -742,25 +864,37 @@ function SceneLights({ activeScene, curve }) {
 
 function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDContent }) {
   const curve = useMemo(() => createFibreCurve(compact), [compact]);
-  const heroSPoint = useMemo(() => new THREE.Vector3(0, compact ? 0.76 : 0.82, 5.72), [compact]);
-  const showHeroS = activeScene === "hero";
-  const heroSScale = activeScene === "hero" ? (compact ? 0.82 : 1.16) : compact ? 0.34 : 0.42;
+  const heroSPoint = useMemo(() => getCurvePoint(curve, "hero").add(new THREE.Vector3(0, compact ? 0.34 : 0.42, 0.08)), [compact, curve]);
+  const fibrePresence = getFibrePresence(scrollProgress);
+  const fibreProgress = getFibreSignalProgress(scrollProgress);
+  const heroSPresence = getHeroLogoPresence(scrollProgress);
+  const visualScene = getVisualScene(activeScene, scrollProgress);
+  const showHeroS = heroSPresence > 0.01;
+  const heroSScale = compact ? 0.82 : 1.16;
 
   return (
     <>
       <color attach="background" args={["#020305"]} />
       <fog attach="fog" args={["#020305", compact ? 5 : 6.5, compact ? 25 : 36]} />
-      <CameraRig activeScene={activeScene} compact={compact} curve={curve} scrollProgress={scrollProgress} />
-      <SceneLights activeScene={activeScene} curve={curve} />
-      <ScrollReactiveBackground activeScene={activeScene} compact={compact} scrollProgress={scrollProgress} />
-      {showHeroS ? <SMark3D active={activeScene === "hero"} compact={compact} position={heroSPoint} scale={heroSScale} scrollProgress={scrollProgress} /> : null}
-      <FibreCable activeScene={activeScene} curve={curve} scrollProgress={scrollProgress} />
-      <SectionGate activeScene={activeScene} compact={compact} curve={curve} scrollProgress={scrollProgress} />
-      <PacketLights count={compact ? 3 : 6} curve={curve} scrollProgress={scrollProgress} />
-      <RunwayTiles activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} threeDContent={threeDContent} />
-      <ContactOutroS activeScene={activeScene} compact={compact} curve={curve} scrollProgress={scrollProgress} />
+      <CameraRig activeScene={visualScene} compact={compact} curve={curve} scrollProgress={scrollProgress} />
+      <SceneLights activeScene={visualScene} curve={curve} />
+      {showHeroS ? (
+        <SMark3D
+          active={activeScene === "hero"}
+          compact={compact}
+          href={internalRoutes.hero}
+          navigate={navigate}
+          opacity={heroSPresence}
+          position={heroSPoint}
+          scale={heroSScale}
+          scrollProgress={scrollProgress}
+        />
+      ) : null}
+      <FibreCable compact={compact} curve={curve} presence={fibrePresence} scrollProgress={scrollProgress} signalProgress={fibreProgress} />
+      <RunwayTiles compact={compact} curve={curve} fibrePresence={fibrePresence} fibreProgress={fibreProgress} navigate={navigate} scrollProgress={scrollProgress} threeDContent={threeDContent} />
+      <ContactOutroS activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} scrollProgress={scrollProgress} />
       <EffectComposer multisampling={0}>
-        <Bloom intensity={compact ? 0.24 : 0.36} luminanceThreshold={0.16} mipmapBlur radius={compact ? 0.24 : 0.34} />
+        <Bloom intensity={compact ? 0.2 : 0.28} luminanceThreshold={0.18} mipmapBlur radius={compact ? 0.22 : 0.3} />
       </EffectComposer>
     </>
   );
@@ -787,7 +921,7 @@ export default function Scene3D({ activeScene, scrollProgress, threeDContent = d
   return (
     <Canvas
       aria-hidden="true"
-      camera={{ position: [0, 1.2, compact ? 11.2 : 13], fov: compact ? 50 : 48, near: 0.1, far: 90 }}
+      camera={{ position: [0, 1.2, compact ? 12.2 : 15.2], fov: compact ? 52 : 48, near: 0.1, far: 100 }}
       className="scene-canvas"
       dpr={compact ? [1, 1.1] : [1, 1.45]}
       gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: "high-performance" }}
