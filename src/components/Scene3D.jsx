@@ -112,6 +112,7 @@ function getOutroLogoPresence(scrollProgress) {
 function getVisualScene(activeScene, scrollProgress) {
   if (scrollProgress > OUTRO_SHUTTER.fibreFadeStart) return "outro";
   if (scrollProgress > INTRO_SHUTTER.fibreStart) return getFibreFocusScene(getFibreSignalProgress(scrollProgress), "hero");
+  if (scrollProgress < INTRO_SHUTTER.fibreStart) return "hero";
   return activeScene;
 }
 
@@ -145,6 +146,14 @@ function useDisplayPrefs() {
 
 function vectorFrom(point, offset) {
   return new THREE.Vector3(point.x + offset[0], point.y + offset[1], point.z + offset[2]);
+}
+
+function getHeroLogoPoint(curve, compact) {
+  return vectorFrom(getCurvePoint(curve, "hero"), [0, compact ? 0.22 : 0.28, 0.08]);
+}
+
+function getOutroLogoPoint(curve, compact) {
+  return vectorFrom(getCurvePoint(curve, "outro"), [0, compact ? 0.48 : 0.62, 0.54]);
 }
 
 function updateTubeDrawRange(mesh, reveal) {
@@ -216,14 +225,14 @@ function CameraRig({ activeScene, compact, curve, scrollProgress }) {
     const tilePoint = getTilePosition(curve, activeScene, compact, fibreProgress);
     const cameraZ = compact ? 11.65 : 14.55;
 
-    if (activeScene === "hero" && scrollProgress < INTRO_SHUTTER.fibreStart) {
-      const heroPoint = getCurvePoint(curve, "hero");
-      desired.set(pointer.x * (compact ? 0.08 : 0.14), heroPoint.y + 0.48 + pointer.y * 0.12, cameraZ + 0.62);
-      look.copy(heroPoint).add(new THREE.Vector3(0, compact ? 0.08 : 0.12, 0));
+    if (scrollProgress < INTRO_SHUTTER.fibreStart) {
+      const heroPoint = getHeroLogoPoint(curve, compact);
+      desired.set(0, heroPoint.y, cameraZ + 0.62);
+      look.copy(heroPoint);
     } else if (activeScene === "outro") {
-      const outroPoint = getCurvePoint(curve, "outro");
-      desired.set(pointer.x * (compact ? 0.08 : 0.14), outroPoint.y + 0.5 + pointer.y * 0.12, cameraZ + 0.48);
-      look.copy(outroPoint).add(new THREE.Vector3(0, compact ? 0.16 : 0.22, 0));
+      const outroPoint = getOutroLogoPoint(curve, compact);
+      desired.set(0, outroPoint.y, cameraZ + 0.48);
+      look.copy(outroPoint);
     } else {
       if (compact) {
         desired.set(tilePoint.x * 0.16 + pointer.x * 0.04, point.y + 0.32 + pointer.y * 0.05, cameraZ);
@@ -509,14 +518,164 @@ function SectionGate({ activeScene, compact, curve, scrollProgress }) {
   );
 }
 
-function LogoFibreEmission({ compact, curve, mode = "intro", scrollProgress }) {
+function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
+  const groupRef = useRef(null);
+  const lineRef = useRef(null);
+  const lineGlowRef = useRef(null);
+  const dotRefs = useRef([]);
+  const dotGlowRefs = useRef([]);
+  const network = useMemo(() => {
+    const count = compact ? 30 : 48;
+    const width = compact ? 8.9 : 15.2;
+    const height = compact ? 4.7 : 7.2;
+    const points = Array.from({ length: count }, (_, index) => {
+      const t = index / Math.max(1, count - 1);
+      const sidePull = t < 0.5 ? -1 : 1;
+      const centerGap = Math.abs(t - 0.5) < 0.14 ? (compact ? 0.78 : 1.1) : 0;
+      const row = index % 7;
+      const x = THREE.MathUtils.lerp(-width / 2, width / 2, t) + sidePull * centerGap + (noise01(index, 11) - 0.5) * (compact ? 0.5 : 0.84);
+      const y = (row - 3) * (height / 7) + Math.sin(index * 1.21 + (variant === "outro" ? 0.72 : 0)) * (compact ? 0.34 : 0.54);
+
+      return {
+        centerWeight: THREE.MathUtils.clamp(1 - Math.abs(x) / (compact ? 2.1 : 3.4), 0, 1),
+        phase: noise01(index, 13) * Math.PI * 2,
+        speed: 0.3 + noise01(index, 14) * 0.2,
+        x,
+        y,
+        z: -0.58 - noise01(index, 15) * 0.18
+      };
+    });
+    const links = [];
+
+    points.forEach((point, index) => {
+      if (index < points.length - 1) {
+        const other = points[index + 1];
+        links.push({ from: index, to: index + 1, distance: Math.hypot(point.x - other.x, point.y - other.y) });
+      }
+
+      points.slice(index + 1).forEach((other, offset) => {
+        const otherIndex = index + offset + 1;
+        const distance = Math.hypot(point.x - other.x, point.y - other.y);
+
+        if (distance < (compact ? 1.86 : 2.74)) {
+          links.push({ from: index, to: otherIndex, distance });
+        }
+      });
+    });
+
+    links.sort((a, b) => a.distance - b.distance);
+
+    const visibleLinks = links.slice(0, compact ? 56 : 96);
+
+    return {
+      glowPositions: new Float32Array(visibleLinks.length * 6),
+      links: visibleLinks,
+      points,
+      positions: new Float32Array(visibleLinks.length * 6)
+    };
+  }, [compact, variant]);
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+
+    const presence = THREE.MathUtils.clamp(opacity, 0, 1);
+    groupRef.current.position.lerp(origin, 0.18);
+    groupRef.current.rotation.z = Math.sin(clock.elapsedTime * 0.12) * 0.018;
+
+    const animated = network.points.map((point, index) => {
+      const driftX = Math.sin(clock.elapsedTime * point.speed + point.phase) * (compact ? 0.035 : 0.055);
+      const driftY = Math.cos(clock.elapsedTime * (point.speed * 0.82) + point.phase) * (compact ? 0.028 : 0.045);
+      const current = new THREE.Vector3(point.x + driftX, point.y + driftY, point.z);
+      const dot = dotRefs.current[index];
+
+      if (dot) {
+        dot.position.copy(current);
+        dot.scale.setScalar(0.82 + Math.sin(clock.elapsedTime * 0.7 + point.phase) * 0.14);
+        dot.material.opacity = THREE.MathUtils.lerp(dot.material.opacity, presence * (index % 5 === 0 ? 0.58 : 0.38) * (1 - point.centerWeight * 0.5), 0.1);
+      }
+
+      const glow = dotGlowRefs.current[index];
+      if (glow) {
+        glow.position.copy(current);
+        glow.scale.setScalar(1.1 + Math.sin(clock.elapsedTime * 0.55 + point.phase) * 0.18);
+        glow.material.opacity = THREE.MathUtils.lerp(glow.material.opacity, presence * (index % 5 === 0 ? 0.18 : 0.1) * (1 - point.centerWeight * 0.42), 0.1);
+      }
+
+      return current;
+    });
+
+    [lineRef.current, lineGlowRef.current].forEach((line) => {
+      if (!line) return;
+      const positions = line.geometry.attributes.position;
+      network.links.forEach(({ from, to }, index) => {
+        const start = animated[from];
+        const end = animated[to];
+        positions.setXYZ(index * 2, start.x, start.y, start.z);
+        positions.setXYZ(index * 2 + 1, end.x, end.y, end.z);
+      });
+
+      positions.needsUpdate = true;
+    });
+
+    if (lineRef.current) {
+      lineRef.current.material.opacity = THREE.MathUtils.lerp(lineRef.current.material.opacity, presence * 0.32, 0.1);
+    }
+
+    if (lineGlowRef.current) {
+      lineGlowRef.current.material.opacity = THREE.MathUtils.lerp(lineGlowRef.current.material.opacity, presence * 0.11, 0.1);
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={origin} renderOrder={-8}>
+      <lineSegments ref={lineGlowRef} renderOrder={-9}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[network.glowPositions, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial color="#1fdcff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </lineSegments>
+      <lineSegments ref={lineRef} renderOrder={-8}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[network.positions, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial color={variant === "outro" ? "#63fff5" : "#52efff"} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </lineSegments>
+      {network.points.map((point, index) => (
+        <group key={`s-network-${variant}-${index}`}>
+          <mesh
+            position={[point.x, point.y, point.z]}
+            ref={(node) => {
+              if (node) dotGlowRefs.current[index] = node;
+            }}
+            renderOrder={-8}
+          >
+            <sphereGeometry args={[compact ? 0.052 : 0.076, 12, 12]} />
+            <meshBasicMaterial color="#1fdcff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+          </mesh>
+          <mesh
+            position={[point.x, point.y, point.z]}
+            ref={(node) => {
+              if (node) dotRefs.current[index] = node;
+            }}
+            renderOrder={-7}
+          >
+            <sphereGeometry args={[compact ? 0.013 : 0.019, 10, 10]} />
+            <meshBasicMaterial color={index % 4 === 0 ? "#f6fffe" : "#6bfaff"} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function LogoFibreEmission({ compact, curve, mode = "intro", originPoint, scrollProgress }) {
   const refs = useRef([]);
   const isIntro = mode === "intro";
   const origin = useMemo(() => {
-    const scene = isIntro ? "hero" : "outro";
-    const offset = isIntro ? [0, compact ? 0.34 : 0.42, 0.34] : [0, compact ? 0.56 : 0.72, 0.56];
-    return vectorFrom(getCurvePoint(curve, scene), offset);
-  }, [compact, curve, isIntro]);
+    if (originPoint) return originPoint.clone();
+
+    return isIntro ? getHeroLogoPoint(curve, compact) : getOutroLogoPoint(curve, compact);
+  }, [compact, curve, isIntro, originPoint]);
   const particles = useMemo(
     () => {
       const count = compact ? 64 : 104;
@@ -996,21 +1155,24 @@ function RunwayTiles({ compact, curve, fibrePresence, fibreProgress, navigate, s
 function ContactOutroS({ activeScene, compact, curve, navigate, scrollProgress }) {
   const reform = getOutroLogoPresence(scrollProgress);
   const active = activeScene === "outro" || reform > 0.55;
-  const point = useMemo(() => vectorFrom(getCurvePoint(curve, "outro"), [0, compact ? 0.56 : 0.72, 0.54]), [compact, curve]);
+  const point = useMemo(() => getOutroLogoPoint(curve, compact), [compact, curve]);
 
   if (reform <= 0.01 && activeScene !== "contact" && activeScene !== "outro") return null;
 
   return (
-    <SMark3D
-      active={active}
-      compact={compact}
-      href={internalRoutes.hero}
-      navigate={navigate}
-      opacity={reform}
-      position={point}
-      scale={active ? (compact ? 0.96 : 1.18) : compact ? 0.42 : 0.5}
-      scrollProgress={scrollProgress}
-    />
+    <>
+      <SNetworkBackdrop compact={compact} opacity={reform} origin={point} variant="outro" />
+      <SMark3D
+        active={active}
+        compact={compact}
+        href={internalRoutes.hero}
+        navigate={navigate}
+        opacity={reform}
+        position={point}
+        scale={active ? (compact ? 1.22 : 1.46) : compact ? 0.7 : 0.82}
+        scrollProgress={scrollProgress}
+      />
+    </>
   );
 }
 
@@ -1029,13 +1191,14 @@ function SceneLights({ activeScene, curve }) {
 
 function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDContent }) {
   const curve = useMemo(() => createFibreCurve(compact), [compact]);
-  const heroSPoint = useMemo(() => getCurvePoint(curve, "hero").add(new THREE.Vector3(0, compact ? 0.34 : 0.42, 0.08)), [compact, curve]);
+  const heroSPoint = useMemo(() => getHeroLogoPoint(curve, compact), [compact, curve]);
+  const outroSPoint = useMemo(() => getOutroLogoPoint(curve, compact), [compact, curve]);
   const fibrePresence = getFibrePresence(scrollProgress);
   const fibreProgress = getFibreSignalProgress(scrollProgress);
   const heroSPresence = getHeroLogoPresence(scrollProgress);
   const visualScene = getVisualScene(activeScene, scrollProgress);
   const showHeroS = heroSPresence > 0.01;
-  const heroSScale = compact ? 0.82 : 1.16;
+  const heroSScale = compact ? 1.5 : 1.85;
 
   return (
     <>
@@ -1043,11 +1206,13 @@ function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDC
       <fog attach="fog" args={["#020305", compact ? 5 : 6.5, compact ? 25 : 36]} />
       <CameraRig activeScene={visualScene} compact={compact} curve={curve} scrollProgress={scrollProgress} />
       <SceneLights activeScene={visualScene} curve={curve} />
+      <SNetworkBackdrop compact={compact} opacity={heroSPresence} origin={heroSPoint} variant="hero" />
       {showHeroS ? (
         <SMark3D
           active={activeScene === "hero"}
           compact={compact}
           href={internalRoutes.hero}
+          locked
           navigate={navigate}
           opacity={heroSPresence}
           position={heroSPoint}
@@ -1055,10 +1220,10 @@ function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDC
           scrollProgress={scrollProgress}
         />
       ) : null}
-      <LogoFibreEmission compact={compact} curve={curve} mode="intro" scrollProgress={scrollProgress} />
+      <LogoFibreEmission compact={compact} curve={curve} mode="intro" originPoint={heroSPoint} scrollProgress={scrollProgress} />
       <FibreCable compact={compact} curve={curve} presence={fibrePresence} scrollProgress={scrollProgress} signalProgress={fibreProgress} />
       <RunwayTiles compact={compact} curve={curve} fibrePresence={fibrePresence} fibreProgress={fibreProgress} navigate={navigate} scrollProgress={scrollProgress} threeDContent={threeDContent} />
-      <LogoFibreEmission compact={compact} curve={curve} mode="outro" scrollProgress={scrollProgress} />
+      <LogoFibreEmission compact={compact} curve={curve} mode="outro" originPoint={outroSPoint} scrollProgress={scrollProgress} />
       <ContactOutroS activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} scrollProgress={scrollProgress} />
       <EffectComposer multisampling={0}>
         <Bloom intensity={compact ? 0.2 : 0.28} luminanceThreshold={0.18} mipmapBlur radius={compact ? 0.22 : 0.3} />

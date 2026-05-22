@@ -2,6 +2,23 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { routeNodes } from "../data/profileData.js";
+import { FIBRE_TILE_POINTS } from "./FibreCable.jsx";
+
+const tileScrollTargets = Object.fromEntries(FIBRE_TILE_POINTS.map(({ progress, scene }) => [scene, progress]));
+
+function getSceneScrollTop(sceneId) {
+  const scrollRange = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const progressTarget = tileScrollTargets[sceneId];
+
+  if (Number.isFinite(progressTarget) && scrollRange > 0) {
+    return progressTarget * scrollRange;
+  }
+
+  const target = document.getElementById(sceneId);
+  if (!target) return null;
+
+  return target.getBoundingClientRect().top + window.scrollY;
+}
 
 export function Nav({ activeScene, onHoverScene, routeNodes: nodes = routeNodes }) {
   const navRef = useRef(null);
@@ -20,12 +37,23 @@ export function Nav({ activeScene, onHoverScene, routeNodes: nodes = routeNodes 
   }, [activeScene]);
 
   const handleSceneClick = (event, sceneId) => {
-    const target = document.getElementById(sceneId);
+    const scrollTop = getSceneScrollTop(sceneId);
 
-    if (!target) return;
+    if (scrollTop === null) return;
 
     event.preventDefault();
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (window.__portfolioLenis?.scrollTo) {
+      window.__portfolioLenis.scrollTo(scrollTop, {
+        duration: reduceMotion ? 0 : 0.58,
+        immediate: reduceMotion
+      });
+    } else {
+      window.scrollTo({
+        top: scrollTop,
+        behavior: reduceMotion ? "auto" : "smooth"
+      });
+    }
     window.history.replaceState(null, "", `#${sceneId}`);
     setMenuOpen(false);
   };

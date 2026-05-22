@@ -16,6 +16,7 @@ export function SmoothScroll() {
       wheelMultiplier: 0.82,
       touchMultiplier: 1.1
     });
+    window.__portfolioLenis = lenis;
 
     let frameId;
     const raf = (time) => {
@@ -27,6 +28,9 @@ export function SmoothScroll() {
 
     return () => {
       cancelAnimationFrame(frameId);
+      if (window.__portfolioLenis === lenis) {
+        delete window.__portfolioLenis;
+      }
       lenis.destroy();
     };
   }, []);

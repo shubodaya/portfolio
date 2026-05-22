@@ -4,7 +4,7 @@ import { useRef } from "react";
 import * as THREE from "three";
 import helvetikerBold from "three/examples/fonts/helvetiker_bold.typeface.json";
 
-export function SMark3D({ active = false, compact = false, href, navigate, opacity = 1, position = [0, 0, 0], scale = 1, scrollProgress = 0 }) {
+export function SMark3D({ active = false, compact = false, href, locked = false, navigate, opacity = 1, position = [0, 0, 0], scale = 1, scrollProgress = 0 }) {
   const groupRef = useRef(null);
 
   useFrame(({ clock, pointer }) => {
@@ -13,16 +13,20 @@ export function SMark3D({ active = false, compact = false, href, navigate, opaci
     const baseY = Array.isArray(position) ? position[1] : position.y ?? 0;
     const baseZ = Array.isArray(position) ? position[2] : position.z ?? 0;
     if (groupRef.current) {
-      const targetScale = scale * (active ? 1 : 0.86) * THREE.MathUtils.clamp(0.72 + opacity * 0.28, 0.01, 1);
-      const logoHold = THREE.MathUtils.smoothstep(opacity, 0.08, 0.9);
+      const targetScale = scale * (active ? 1 : 0.86) * THREE.MathUtils.clamp(0.94 + opacity * 0.06, 0.01, 1);
+      const logoHold = locked ? 0 : THREE.MathUtils.smoothstep(opacity, 0.08, 0.9);
       const horizontalYaw = (Math.sin(elapsed * 0.32) * 0.06 + pointer.x * 0.035) * logoHold;
       groupRef.current.scale.setScalar(THREE.MathUtils.lerp(groupRef.current.scale.x, targetScale, 0.06));
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, pointer.y * 0.018 * logoHold, 0.035);
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, horizontalYaw, 0.055);
       groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, 0, 0.06);
-      groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, baseX, 0.18);
-      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, baseY + Math.sin(elapsed * 0.9) * 0.012 * logoHold, 0.18);
-      groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, baseZ, 0.18);
+      if (locked) {
+        groupRef.current.position.set(baseX, baseY, baseZ);
+      } else {
+        groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, baseX, 0.18);
+        groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, baseY, 0.18);
+        groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, baseZ, 0.18);
+      }
     }
   });
 
