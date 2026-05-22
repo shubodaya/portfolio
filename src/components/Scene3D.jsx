@@ -546,7 +546,7 @@ function LogoFibreEmission({ compact, curve, scrollProgress }) {
 }
 
 function estimateTileLines(textItems, compact) {
-  const wrapAt = compact ? 28 : 46;
+  const wrapAt = compact ? 28 : 72;
   return textItems.reduce((total, item) => total + Math.max(1, Math.ceil(String(item ?? "").length / wrapAt)), 0);
 }
 
@@ -590,12 +590,11 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
   const { dense, height, longTitle, scale: activeScale, width } = getTileMetrics({ body, compact, lines, scene, title, typography });
   const titleSize = (compact ? (longTitle ? 0.112 : 0.148) : isHero ? 0.17 : longTitle ? 0.17 : dense ? 0.235 : 0.265) * titleScale;
   const subtitleSize = (compact ? 0.071 : dense ? 0.105 : 0.112) * bodyScale;
-  const bulletSize = (compact ? (dense ? 0.061 : 0.066) : dense ? 0.089 : 0.096) * bodyScale;
-  const bodyLineHeight = (compact ? 1.3 : 1.36) * lineHeightScale;
+  const bulletSize = (compact ? (dense ? 0.061 : 0.066) : dense ? 0.078 : 0.088) * bodyScale;
+  const bodyLineHeight = (compact ? 1.3 : 1.28) * lineHeightScale;
   const kickerSize = (compact ? 0.074 : isHero ? 0.078 : dense ? 0.082 : 0.094) * kickerScale;
   const bulletText = lines.filter(Boolean).join("\n");
-  const leftBulletText = compact ? bulletText : lines.filter(Boolean).slice(0, Math.ceil(lines.length / 2)).join("\n");
-  const rightBulletText = compact ? "" : lines.filter(Boolean).slice(Math.ceil(lines.length / 2)).join("\n");
+  const leftBulletText = bulletText;
   const portX = position.x >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
   const portY = -height / 2 + (compact ? 0.44 : 0.58);
   const hasIcon = Boolean(icon);
@@ -607,9 +606,7 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
   const bulletY = subtitleY - (compact ? 0.56 : 0.68);
   const bodyX = -width / 2 + inset;
   const bodyMaxWidth = width - inset * 2 - (compact ? 0.18 : 0.24);
-  const columnGap = compact ? 0 : 0.34;
-  const columnWidth = compact ? bodyMaxWidth : (bodyMaxWidth - columnGap) / 2;
-  const rightColumnX = bodyX + columnWidth + columnGap;
+  const columnWidth = bodyMaxWidth;
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
@@ -744,21 +741,6 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
       >
         {leftBulletText}
       </Text>
-      {rightBulletText ? (
-        <Text
-          anchorX="left"
-          anchorY="top"
-          color="#e6f4f6"
-          fontSize={bulletSize}
-          lineHeight={bodyLineHeight}
-          material-depthTest={false}
-          maxWidth={columnWidth}
-          position={[rightColumnX, bulletY, 0.07]}
-          renderOrder={6}
-        >
-          {rightBulletText}
-        </Text>
-      ) : null}
     </group>
   );
 }
@@ -782,7 +764,8 @@ function RunwayTiles({ compact, curve, fibrePresence, fibreProgress, navigate, s
         const activation = tileFieldPresence * tileState.activation;
         const sceneIndex = tileSceneOrder.indexOf(scene);
         const nearby = Math.abs(sceneIndex - activeIndex) <= 1;
-        const branchVisible = tileFieldPresence > 0.08 && tileState.reached && tileState.distance < FIBRE_BRANCH_RELEASE * 1.35 && (activation > 0.01 || nearby);
+        const tileShrinkStartsAt = FIBRE_BRANCH_RELEASE * 0.74;
+        const branchVisible = tileFieldPresence > 0.08 && tileState.reached && tileState.distance <= tileShrinkStartsAt && (activation > 0.01 || nearby);
         const content = tileContent[scene] ?? defaultThreeDContent.tiles[scene];
         if (!content) return null;
         const color = sectionColors[scene] ?? COLORS.mint;
@@ -793,15 +776,17 @@ function RunwayTiles({ compact, curve, fibrePresence, fibreProgress, navigate, s
 
         return (
           <group key={scene}>
-            <BranchCable
-              activation={activation}
-              branchTravel={tileState.branchTravel}
-              color={color}
-              curve={curve}
-              fromT={tileState.progress}
-              to={connectorPointFor(position, compact, { ...content, scene })}
-              visible={branchVisible}
-            />
+            {branchVisible ? (
+              <BranchCable
+                activation={activation}
+                branchTravel={tileState.branchTravel}
+                color={color}
+                curve={curve}
+                fromT={tileState.progress}
+                to={connectorPointFor(position, compact, { ...content, scene })}
+                visible
+              />
+            ) : null}
             <ContentTile3D
               activation={activation}
               body={content.body}
