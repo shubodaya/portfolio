@@ -36,7 +36,7 @@ export function JourneyNetworkBackdrop({ className = "", density = 1, opacity = 
       state.particles = Array.from({ length: count }, (_, index) => ({
         id: index,
         phase: Math.random() * Math.PI * 2,
-        radius: 1 + Math.random() * 1.7,
+        radius: 0.72 + Math.random() * 1,
         vx: (Math.random() - 0.5) * 0.62,
         vy: (Math.random() - 0.5) * 0.62,
         x: Math.random() * state.width,
@@ -121,7 +121,7 @@ export function JourneyNetworkBackdrop({ className = "", density = 1, opacity = 
         const pulse = 0.64 + 0.36 * Math.sin(state.time * 2 + particle.phase);
         context.fillStyle = `rgba(166, 255, 214, ${(0.35 + pulse * 0.5).toFixed(3)})`;
         context.shadowColor = "rgba(35, 216, 153, 0.72)";
-        context.shadowBlur = 13;
+        context.shadowBlur = 9;
         context.beginPath();
         context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
         context.fill();

@@ -541,7 +541,7 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
       return {
         current: new THREE.Vector3(x, y, -0.76 - noise01(index, 16) * 0.1),
         phase: noise01(index, 15) * Math.PI * 2,
-        radius: (compact ? 0.012 : 0.017) + noise01(index, 17) * (compact ? 0.014 : 0.019),
+        radius: (compact ? 0.006 : 0.008) + noise01(index, 17) * (compact ? 0.005 : 0.007),
         vx: (noise01(index, 18) - 0.5) * (compact ? 0.3 : 0.38),
         vy: (noise01(index, 19) - 0.5) * (compact ? 0.3 : 0.38),
         x,
@@ -611,7 +611,7 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
       if (glow) {
         glow.position.copy(point.current);
         glow.scale.setScalar(1.08 + pulse * 0.26 + cursorInfluence * 0.42);
-        glow.material.opacity = THREE.MathUtils.lerp(glow.material.opacity, presence * (0.12 + pulse * 0.1) * (1 + cursorInfluence * 0.32), 0.1);
+        glow.material.opacity = THREE.MathUtils.lerp(glow.material.opacity, presence * (0.08 + pulse * 0.07) * (1 + cursorInfluence * 0.28), 0.1);
       }
     });
 
@@ -670,7 +670,7 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
             }}
             renderOrder={-8}
           >
-            <sphereGeometry args={[point.radius * 3.2, 12, 12]} />
+            <sphereGeometry args={[point.radius * 2.2, 12, 12]} />
             <meshBasicMaterial color="#23d899" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
           </mesh>
           <mesh
@@ -680,7 +680,7 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
             }}
             renderOrder={-7}
           >
-            <sphereGeometry args={[point.radius, 10, 10]} />
+            <sphereGeometry args={[point.radius * 0.72, 10, 10]} />
             <meshBasicMaterial color="#a6ffd6" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
           </mesh>
         </group>
