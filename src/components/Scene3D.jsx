@@ -525,129 +525,124 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
   const lineGlowRef = useRef(null);
   const dotRefs = useRef([]);
   const dotGlowRefs = useRef([]);
-  const [connectionSeed, setConnectionSeed] = useState(0);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setConnectionSeed((current) => current + 1);
-    }, 540);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   const network = useMemo(() => {
-    const count = compact ? 38 : 62;
-    const width = compact ? 9.6 : 17.4;
-    const height = compact ? 5.2 : 8;
+    const count = compact ? 56 : 92;
+    const width = compact ? 8.4 : 13.8;
+    const height = compact ? 4.8 : 7.15;
+    const maxDistance = compact ? 1.7 : 2.35;
     const points = Array.from({ length: count }, (_, index) => {
-      const t = index / Math.max(1, count - 1);
-      const sidePull = t < 0.5 ? -1 : 1;
-      const centerGap = Math.abs(t - 0.5) < 0.14 ? (compact ? 0.78 : 1.1) : 0;
-      const row = index % 7;
-      const x = THREE.MathUtils.lerp(-width / 2, width / 2, t) + sidePull * centerGap + (noise01(index, 11) - 0.5) * (compact ? 0.5 : 0.84);
-      const y = (row - 3) * (height / 7) + Math.sin(index * 1.21 + (variant === "outro" ? 0.72 : 0)) * (compact ? 0.34 : 0.54);
+      const row = index % (compact ? 7 : 9);
+      const x = (noise01(index, variant === "outro" ? 29 : 11) - 0.5) * width;
+      const y =
+        THREE.MathUtils.lerp(-height / 2, height / 2, row / (compact ? 6 : 8)) +
+        (noise01(index, variant === "outro" ? 31 : 13) - 0.5) * (compact ? 0.72 : 0.9);
 
       return {
-        centerWeight: THREE.MathUtils.clamp(1 - Math.abs(x) / (compact ? 2.1 : 3.4), 0, 1),
-        phase: noise01(index, 13) * Math.PI * 2,
-        speed: 0.3 + noise01(index, 14) * 0.2,
+        current: new THREE.Vector3(x, y, -0.76 - noise01(index, 16) * 0.1),
+        phase: noise01(index, 15) * Math.PI * 2,
+        radius: (compact ? 0.012 : 0.017) + noise01(index, 17) * (compact ? 0.014 : 0.019),
+        vx: (noise01(index, 18) - 0.5) * (compact ? 0.3 : 0.38),
+        vy: (noise01(index, 19) - 0.5) * (compact ? 0.3 : 0.38),
         x,
         y,
-        z: -0.58 - noise01(index, 15) * 0.18
+        z: -0.76 - noise01(index, 16) * 0.1
       };
     });
     const links = [];
 
     points.forEach((point, index) => {
-      if (index < points.length - 1) {
-        const other = points[index + 1];
-        links.push({ from: index, to: index + 1, distance: Math.hypot(point.x - other.x, point.y - other.y) });
-      }
-
       points.slice(index + 1).forEach((other, offset) => {
         const otherIndex = index + offset + 1;
-        const distance = Math.hypot(point.x - other.x, point.y - other.y);
-
-        if (distance < (compact ? 2.1 : 3.08)) {
-          links.push({ from: index, to: otherIndex, distance });
-        }
+        links.push({ from: index, to: otherIndex });
       });
     });
 
-    links.sort((a, b) => {
-      const aScore = a.distance - noise01(a.from * 17 + a.to * 31, connectionSeed) * (compact ? 0.68 : 1.1);
-      const bScore = b.distance - noise01(b.from * 17 + b.to * 31, connectionSeed) * (compact ? 0.68 : 1.1);
-      return aScore - bScore;
-    });
-
-    const visibleLinks = links.slice(0, compact ? 76 : 132);
-
     return {
-      glowPositions: new Float32Array(visibleLinks.length * 6),
-      links: visibleLinks,
-      points,
+      colors: new Float32Array(links.length * 6),
+      glowColors: new Float32Array(links.length * 6),
+      glowPositions: new Float32Array(links.length * 6),
       height,
-      positions: new Float32Array(visibleLinks.length * 6),
+      links,
+      maxDistance,
+      points,
+      positions: new Float32Array(links.length * 6),
       width
     };
-  }, [compact, connectionSeed, variant]);
+  }, [compact, variant]);
 
-  useFrame(({ clock, pointer }) => {
+  useFrame(({ clock, pointer }, delta) => {
     if (!groupRef.current) return;
 
     const presence = THREE.MathUtils.clamp(opacity, 0, 1);
-    const cursor = new THREE.Vector2(pointer.x * network.width * 0.42, pointer.y * network.height * 0.42);
+    const elapsed = clock.elapsedTime;
+    const cursor = new THREE.Vector2(pointer.x * network.width * 0.32, pointer.y * network.height * 0.32);
+    groupRef.current.visible = presence > 0.01;
     groupRef.current.position.lerp(origin, 0.18);
-    groupRef.current.rotation.z = Math.sin(clock.elapsedTime * 0.12) * 0.018;
+    groupRef.current.rotation.z = Math.sin(elapsed * 0.08 + (variant === "outro" ? 0.6 : 0)) * 0.01;
 
-    const animated = network.points.map((point, index) => {
-      const driftX = Math.sin(clock.elapsedTime * point.speed + point.phase) * (compact ? 0.035 : 0.055);
-      const driftY = Math.cos(clock.elapsedTime * (point.speed * 0.82) + point.phase) * (compact ? 0.028 : 0.045);
+    network.points.forEach((point, index) => {
+      point.x += point.vx * delta * 0.55;
+      point.y += point.vy * delta * 0.55;
+
+      const xLimit = network.width / 2 + 0.18;
+      const yLimit = network.height / 2 + 0.18;
+      if (point.x <= -xLimit || point.x >= xLimit) point.vx *= -1;
+      if (point.y <= -yLimit || point.y >= yLimit) point.vy *= -1;
+
       const cursorDistance = Math.hypot(point.x - cursor.x, point.y - cursor.y);
-      const cursorInfluence = THREE.MathUtils.clamp(1 - cursorDistance / (compact ? 2.2 : 3.7), 0, 1);
-      const current = new THREE.Vector3(
-        point.x + driftX + (cursor.x - point.x) * cursorInfluence * 0.055,
-        point.y + driftY + (cursor.y - point.y) * cursorInfluence * 0.055,
+      const cursorInfluence = THREE.MathUtils.clamp(1 - cursorDistance / (compact ? 1.65 : 2.45), 0, 1);
+      point.current.set(
+        point.x + (cursor.x - point.x) * cursorInfluence * 0.025,
+        point.y + (cursor.y - point.y) * cursorInfluence * 0.025,
         point.z
       );
+
       const dot = dotRefs.current[index];
+      const pulse = 0.64 + 0.36 * Math.sin(elapsed * 2 + point.phase);
 
       if (dot) {
-        dot.position.copy(current);
-        dot.scale.setScalar(0.82 + cursorInfluence * 0.46 + Math.sin(clock.elapsedTime * 0.7 + point.phase) * 0.14);
-        dot.material.opacity = THREE.MathUtils.lerp(dot.material.opacity, presence * (index % 5 === 0 ? 0.58 : 0.38) * (1 - point.centerWeight * 0.5) * (1 + cursorInfluence * 0.85), 0.1);
+        dot.position.copy(point.current);
+        dot.scale.setScalar(0.84 + pulse * 0.22 + cursorInfluence * 0.28);
+        dot.material.opacity = THREE.MathUtils.lerp(dot.material.opacity, presence * (0.35 + pulse * 0.5) * (1 + cursorInfluence * 0.18), 0.1);
       }
 
       const glow = dotGlowRefs.current[index];
       if (glow) {
-        glow.position.copy(current);
-        glow.scale.setScalar(1.1 + cursorInfluence * 0.95 + Math.sin(clock.elapsedTime * 0.55 + point.phase) * 0.18);
-        glow.material.opacity = THREE.MathUtils.lerp(glow.material.opacity, presence * (index % 5 === 0 ? 0.18 : 0.1) * (1 - point.centerWeight * 0.42) * (1 + cursorInfluence * 1.3), 0.1);
+        glow.position.copy(point.current);
+        glow.scale.setScalar(1.08 + pulse * 0.26 + cursorInfluence * 0.42);
+        glow.material.opacity = THREE.MathUtils.lerp(glow.material.opacity, presence * (0.12 + pulse * 0.1) * (1 + cursorInfluence * 0.32), 0.1);
       }
-
-      return current;
     });
 
     [lineRef.current, lineGlowRef.current].forEach((line) => {
       if (!line) return;
       const positions = line.geometry.attributes.position;
+      const colors = line.geometry.attributes.color;
+
       network.links.forEach(({ from, to }, index) => {
-        const start = animated[from];
-        const end = animated[to];
+        const start = network.points[from].current;
+        const end = network.points[to].current;
+        const distance = start.distanceTo(end);
+        const distanceFactor = THREE.MathUtils.clamp(1 - distance / network.maxDistance, 0, 1);
+        const phasePulse = (Math.sin(elapsed * 2.1 + network.points[from].phase - network.points[to].phase * 0.65) + 1) / 2;
+        const strength = phasePulse < 0.1 ? 0 : distanceFactor * (0.18 + 0.6 * phasePulse);
+        const glowMultiplier = line === lineGlowRef.current ? 0.72 : 1;
+        const r = 0.137 * strength * glowMultiplier;
+        const g = 0.847 * strength * glowMultiplier;
+        const b = 0.6 * strength * glowMultiplier;
+
         positions.setXYZ(index * 2, start.x, start.y, start.z);
         positions.setXYZ(index * 2 + 1, end.x, end.y, end.z);
+
+        colors.setXYZ(index * 2, r, g, b);
+        colors.setXYZ(index * 2 + 1, r, g, b);
       });
 
       positions.needsUpdate = true;
+      colors.needsUpdate = true;
+      line.material.opacity = THREE.MathUtils.lerp(line.material.opacity, presence * (line === lineGlowRef.current ? 0.34 : 0.78), 0.1);
     });
-
-    if (lineRef.current) {
-      lineRef.current.material.opacity = THREE.MathUtils.lerp(lineRef.current.material.opacity, presence * 0.32, 0.1);
-    }
-
-    if (lineGlowRef.current) {
-      lineGlowRef.current.material.opacity = THREE.MathUtils.lerp(lineGlowRef.current.material.opacity, presence * 0.11, 0.1);
-    }
   });
 
   return (
@@ -655,14 +650,16 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
       <lineSegments ref={lineGlowRef} renderOrder={-9}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[network.glowPositions, 3]} />
+          <bufferAttribute attach="attributes-color" args={[network.glowColors, 3]} />
         </bufferGeometry>
-        <lineBasicMaterial color="#1fdcff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <lineBasicMaterial transparent vertexColors opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </lineSegments>
       <lineSegments ref={lineRef} renderOrder={-8}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[network.positions, 3]} />
+          <bufferAttribute attach="attributes-color" args={[network.colors, 3]} />
         </bufferGeometry>
-        <lineBasicMaterial color={variant === "outro" ? "#63fff5" : "#52efff"} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <lineBasicMaterial transparent vertexColors opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </lineSegments>
       {network.points.map((point, index) => (
         <group key={`s-network-${variant}-${index}`}>
@@ -673,8 +670,8 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
             }}
             renderOrder={-8}
           >
-            <sphereGeometry args={[compact ? 0.052 : 0.076, 12, 12]} />
-            <meshBasicMaterial color="#1fdcff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+            <sphereGeometry args={[point.radius * 3.2, 12, 12]} />
+            <meshBasicMaterial color="#23d899" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
           </mesh>
           <mesh
             position={[point.x, point.y, point.z]}
@@ -683,8 +680,8 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
             }}
             renderOrder={-7}
           >
-            <sphereGeometry args={[compact ? 0.013 : 0.019, 10, 10]} />
-            <meshBasicMaterial color={index % 4 === 0 ? "#f6fffe" : "#6bfaff"} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
+            <sphereGeometry args={[point.radius, 10, 10]} />
+            <meshBasicMaterial color="#a6ffd6" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
           </mesh>
         </group>
       ))}
