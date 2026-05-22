@@ -3,6 +3,16 @@ import { JourneyNetworkBackdrop } from "./JourneyNetworkBackdrop.jsx";
 import { profile, routeNodes } from "../data/profileData.js";
 import { ContactGlyph } from "../twod/components/ContactGlyph.jsx";
 
+const footerSectionLinks = [
+  { href: "/services", label: "Services" },
+  { href: "/highlights", label: "Highlights" },
+  { href: "/featured-projects", label: "Featured Projects" },
+  { href: "/role-pages", label: "Role Pages" },
+  { href: "/insights", label: "Insights" },
+  { href: "/catalog", label: "Catalog" },
+  { href: "/resume", label: "Resume" }
+];
+
 export function SceneSection({ align = "left", children, id, kicker, title }) {
   return (
     <section className={`story-section story-section--${align}`} data-scene-section id={id}>
@@ -16,6 +26,13 @@ export function SceneSection({ align = "left", children, id, kicker, title }) {
 }
 
 export function ScrollExperience({ hero, profile: profileContent = profile, routeNodes: nodes = routeNodes }) {
+  const footerPrimaryLinks = [
+    { href: "/", label: "Home" },
+    ...nodes.map((node) => ({
+      href: node.path || `/${node.id}`,
+      label: node.label
+    }))
+  ];
   const outroLinks = [
     { label: "Email", href: `mailto:${profileContent.email}`, kind: "email" },
     { label: "LinkedIn", href: profileContent.links.linkedin, kind: "linkedin" },
@@ -57,6 +74,55 @@ export function ScrollExperience({ hero, profile: profileContent = profile, rout
             </a>
           ))}
         </nav>
+        <footer className="site-footer" aria-label="Website footer">
+          <div className="site-footer__statement">
+            <p>Behind every reliable business is a network someone carefully protects.</p>
+            <span>Network security, infrastructure support, and practical troubleshooting.</span>
+          </div>
+          <div className="site-footer__links">
+            <section>
+              <h2>Portfolio</h2>
+              <ul>
+                {footerPrimaryLinks.map(({ href, label }) => (
+                  <li key={`${href}-${label}`}>
+                    <a href={href}>{label}</a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section>
+              <h2>Sections</h2>
+              <ul>
+                {footerSectionLinks.map(({ href, label }) => (
+                  <li key={href}>
+                    <a href={href}>{label}</a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section>
+              <h2>Connect</h2>
+              <ul>
+                <li>
+                  <a href={`mailto:${profileContent.email}`}>Email</a>
+                </li>
+                <li>
+                  <a href={profileContent.links.linkedin} rel="noreferrer" target="_blank">LinkedIn</a>
+                </li>
+                <li>
+                  <a href={profileContent.links.github} rel="noreferrer" target="_blank">GitHub</a>
+                </li>
+                <li>
+                  <a href={profileContent.links.blog} rel="noreferrer" target="_blank">Blog</a>
+                </li>
+              </ul>
+            </section>
+          </div>
+          <div className="site-footer__bar">
+            <span>Shubodaya Kumar</span>
+            <span>Network Security Engineer</span>
+          </div>
+        </footer>
       </section>
     </main>
   );
