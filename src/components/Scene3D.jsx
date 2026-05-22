@@ -530,15 +530,15 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setConnectionSeed((current) => current + 1);
-    }, 760);
+    }, 540);
 
     return () => window.clearInterval(intervalId);
   }, []);
 
   const network = useMemo(() => {
-    const count = compact ? 30 : 48;
-    const width = compact ? 8.9 : 15.2;
-    const height = compact ? 4.7 : 7.2;
+    const count = compact ? 38 : 62;
+    const width = compact ? 9.6 : 17.4;
+    const height = compact ? 5.2 : 8;
     const points = Array.from({ length: count }, (_, index) => {
       const t = index / Math.max(1, count - 1);
       const sidePull = t < 0.5 ? -1 : 1;
@@ -568,7 +568,7 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
         const otherIndex = index + offset + 1;
         const distance = Math.hypot(point.x - other.x, point.y - other.y);
 
-        if (distance < (compact ? 1.86 : 2.74)) {
+        if (distance < (compact ? 2.1 : 3.08)) {
           links.push({ from: index, to: otherIndex, distance });
         }
       });
@@ -580,7 +580,7 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
       return aScore - bScore;
     });
 
-    const visibleLinks = links.slice(0, compact ? 56 : 96);
+    const visibleLinks = links.slice(0, compact ? 76 : 132);
 
     return {
       glowPositions: new Float32Array(visibleLinks.length * 6),
@@ -596,7 +596,7 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
     if (!groupRef.current) return;
 
     const presence = THREE.MathUtils.clamp(opacity, 0, 1);
-    const cursor = new THREE.Vector2(pointer.x * network.width * 0.34, pointer.y * network.height * 0.34);
+    const cursor = new THREE.Vector2(pointer.x * network.width * 0.42, pointer.y * network.height * 0.42);
     groupRef.current.position.lerp(origin, 0.18);
     groupRef.current.rotation.z = Math.sin(clock.elapsedTime * 0.12) * 0.018;
 
@@ -604,7 +604,7 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
       const driftX = Math.sin(clock.elapsedTime * point.speed + point.phase) * (compact ? 0.035 : 0.055);
       const driftY = Math.cos(clock.elapsedTime * (point.speed * 0.82) + point.phase) * (compact ? 0.028 : 0.045);
       const cursorDistance = Math.hypot(point.x - cursor.x, point.y - cursor.y);
-      const cursorInfluence = THREE.MathUtils.clamp(1 - cursorDistance / (compact ? 1.9 : 3.1), 0, 1);
+      const cursorInfluence = THREE.MathUtils.clamp(1 - cursorDistance / (compact ? 2.2 : 3.7), 0, 1);
       const current = new THREE.Vector3(
         point.x + driftX + (cursor.x - point.x) * cursorInfluence * 0.055,
         point.y + driftY + (cursor.y - point.y) * cursorInfluence * 0.055,

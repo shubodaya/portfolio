@@ -303,15 +303,15 @@ button {
 .logo-intro__network {
   position: absolute;
   z-index: 1;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -3vh -2vw;
+  width: calc(100% + 4vw);
+  height: calc(100% + 6vh);
   overflow: visible;
-  opacity: 0.72;
+  opacity: 0.82;
   filter:
     drop-shadow(0 0 14px rgba(14, 214, 255, 0.2))
     drop-shadow(0 0 34px rgba(68, 255, 236, 0.09));
-  animation: logoNetworkDrift 18s ease-in-out infinite alternate;
+  animation: logoNetworkDrift 15s ease-in-out infinite alternate;
   pointer-events: none;
 }
 
@@ -333,9 +333,15 @@ button {
   stroke-width: 0.34;
 }
 
+.logo-intro__network-lines--cursor line {
+  opacity: calc(0.18 + var(--cursor-strength) * 0.7);
+  stroke: rgba(164, 255, 252, 0.74);
+  stroke-width: calc(0.24px + var(--cursor-strength) * 0.36px);
+}
+
 .logo-intro__network-dots circle {
   fill: rgba(111, 250, 255, 0.92);
-  opacity: 0.76;
+  opacity: calc(0.62 + var(--cursor-boost, 0) * 0.34);
   transform-box: fill-box;
   transform-origin: center;
   animation: logoNetworkPulse 4.8s ease-in-out infinite;
@@ -344,7 +350,7 @@ button {
 
 .logo-intro__network-dots--glow circle {
   fill: rgba(0, 201, 255, 0.3);
-  opacity: 0.46;
+  opacity: calc(0.34 + var(--cursor-boost, 0) * 0.36);
 }
 
 .logo-intro__mark {
