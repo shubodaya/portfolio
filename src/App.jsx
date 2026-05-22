@@ -33,8 +33,6 @@ function getTileRouteNodes(threeDContent) {
 
   return tileRouteNodes.map((node) => ({
     ...node,
-    label: tiles[node.id]?.title || node.label,
-    signal: tiles[node.id]?.title || node.signal,
     summary: tiles[node.id]?.body || node.summary
   }));
 }

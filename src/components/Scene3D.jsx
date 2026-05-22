@@ -55,6 +55,17 @@ const defaultTileImages = {
   outro: "/assets/portfolio/serverblue.png"
 };
 
+const sceneDisplayTitles = {
+  hero: "Home",
+  about: "About",
+  experience: "Experience",
+  projects: "Projects",
+  skills: "Skills",
+  certifications: "Certifications",
+  education: "Education",
+  contact: "Contact"
+};
+
 const internalRoutes = {
   hero: "/",
   about: "/about",
@@ -175,6 +186,10 @@ function getTileFaceYaw(position, compact) {
   const cameraZ = compact ? 11.65 : 14.55;
   const toCamera = new THREE.Vector3(-position.x, 0, cameraZ - position.z);
   return Math.atan2(toCamera.x, toCamera.z);
+}
+
+function getSceneDisplayTitle(scene, title) {
+  return sceneDisplayTitles[scene] ?? title;
 }
 
 function connectorPointFor(position, compact, content) {
@@ -920,7 +935,7 @@ function RunwayTiles({ compact, curve, fibrePresence, fibreProgress, navigate, s
               presence={tileFieldPresence}
               scene={scene}
               side={position.x >= 0 ? 1 : -1}
-              title={content.title}
+              title={getSceneDisplayTitle(scene, content.title)}
               typography={content.typography}
             />
           </group>
