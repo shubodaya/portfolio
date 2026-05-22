@@ -13,6 +13,7 @@ import {
   getAdminSiteContent,
   loginOwner,
   logoutOwner,
+  notifySiteContentUpdated,
   registerFirstOwner,
   updateAdminSiteContent
 } from "./siteApi";
@@ -1157,6 +1158,7 @@ export function AdminPortal() {
       });
 
       applySavedContent(response);
+      notifySiteContentUpdated();
       setContentMessage("Saved to the shared admin backend.");
     } catch (error) {
       setContentError(error instanceof Error ? error.message : "Failed to save content.");

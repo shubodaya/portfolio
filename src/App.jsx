@@ -28,12 +28,25 @@ const tileRouteNodes = [
   { id: "contact", label: "Contact", short: "CON", signal: "Contact", summary: "Contact routes for network security and infrastructure support work." }
 ];
 
+function cleanAdminLabel(value, fallback) {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
 function getTileRouteNodes(threeDContent) {
   const tiles = threeDContent?.tiles ?? {};
+  const sections = new Map(
+    (Array.isArray(threeDContent?.sections) ? threeDContent.sections : [])
+      .filter((section) => section?.id)
+      .map((section) => [section.id, section])
+  );
 
   return tileRouteNodes.map((node) => ({
     ...node,
-    summary: tiles[node.id]?.body || node.summary
+    label: cleanAdminLabel(tiles[node.id]?.title ?? sections.get(node.id)?.label, node.label),
+    short: cleanAdminLabel(sections.get(node.id)?.short, node.short),
+    signal: cleanAdminLabel(sections.get(node.id)?.signal ?? tiles[node.id]?.title, node.signal),
+    summary: cleanAdminLabel(tiles[node.id]?.body ?? sections.get(node.id)?.summary, node.summary)
   }));
 }
 

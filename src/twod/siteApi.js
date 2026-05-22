@@ -1,4 +1,5 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const LOCAL_DEV_WITHOUT_API = import.meta.env.DEV && !API_BASE_URL;
 const PUBLIC_CONTACT_EMAIL = "contact@shubodaya.dev";
 const LEGACY_CONTACT_EMAIL = ["hns", "hub", "odaya"].join("") + "@gmail.com";
 
@@ -13,6 +14,7 @@ export class ApiError extends Error {
 }
 
 const apiUrl = (path) => `${API_BASE_URL}${path}`;
+export const SITE_CONTENT_UPDATED_CHANNEL = "portfolio-site-content-updated";
 
 const safeJsonParse = (value) => {
   try {
@@ -44,9 +46,22 @@ const sanitizeLegacyContactEmail = (value) => {
 
 const requestJson = async (path, options = {}) => {
   const headers = new Headers(options.headers || {});
+  const method = String(options.method || "GET").toUpperCase();
+  const requestPath =
+    method === "GET"
+      ? `${path}${path.includes("?") ? "&" : "?"}_=${Date.now()}`
+      : path;
+
+  headers.set("Accept", "application/json");
+  if (method === "GET") {
+    headers.set("Cache-Control", "no-cache");
+  }
+
   const init = {
+    cache: method === "GET" ? "no-store" : "default",
     credentials: "include",
     ...options,
+    method,
     headers
   };
 
@@ -55,7 +70,7 @@ const requestJson = async (path, options = {}) => {
     init.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(apiUrl(path), init);
+  const response = await fetch(apiUrl(requestPath), init);
   const text = await response.text();
   const data = text ? safeJsonParse(text) : null;
 
@@ -67,7 +82,24 @@ const requestJson = async (path, options = {}) => {
   return sanitizeLegacyContactEmail(data);
 };
 
-export const fetchPublicSiteContent = async () => requestJson("/api/site-content");
+export const notifySiteContentUpdated = () => {
+  const payload = String(Date.now());
+
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel(SITE_CONTENT_UPDATED_CHANNEL);
+    channel.postMessage({ updatedAt: payload });
+    channel.close();
+  }
+
+  try {
+    window.localStorage.setItem(SITE_CONTENT_UPDATED_CHANNEL, payload);
+  } catch {
+    // Private browsing or strict storage settings should not block saving content.
+  }
+};
+
+export const fetchPublicSiteContent = async () =>
+  LOCAL_DEV_WITHOUT_API ? { configured: false, content: {}, updatedAt: "" } : requestJson("/api/site-content");
 
 export const getAdminSetupStatus = async () => requestJson("/api/admin/setup-status");
 

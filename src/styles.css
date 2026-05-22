@@ -267,10 +267,26 @@ button {
   display: grid;
   place-items: center;
   overflow: hidden;
+  --network-cursor-x: 50vw;
+  --network-cursor-y: 50vh;
+  --network-cursor-opacity: 0;
   background:
     radial-gradient(circle at 50% 45%, rgba(118, 255, 191, 0.12), transparent 27rem),
     linear-gradient(135deg, #000 0%, #020608 58%, #000 100%);
   transform-origin: 100% 50%;
+}
+
+.logo-intro::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(circle at var(--network-cursor-x) var(--network-cursor-y), rgba(45, 229, 255, 0.18), rgba(44, 255, 232, 0.07) 13rem, transparent 24rem);
+  opacity: var(--network-cursor-opacity);
+  transition: opacity 240ms ease;
+  pointer-events: none;
+  mix-blend-mode: screen;
 }
 
 .logo-intro__grid {
@@ -302,6 +318,7 @@ button {
 .logo-intro__network-lines line {
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
+  transition: opacity 360ms ease;
   animation: logoNetworkLinePulse 7.6s ease-in-out infinite;
   animation-delay: calc(var(--line-index) * -0.09s);
 }

@@ -55,7 +55,7 @@ const defaultTileImages = {
   outro: "/assets/portfolio/serverblue.png"
 };
 
-const sceneDisplayTitles = {
+const fallbackSceneTitles = {
   hero: "Home",
   about: "About",
   experience: "Experience",
@@ -198,7 +198,8 @@ function getTileFaceYaw(position, compact) {
 }
 
 function getSceneDisplayTitle(scene, title) {
-  return sceneDisplayTitles[scene] ?? title;
+  const adminTitle = String(title ?? "").trim();
+  return adminTitle || fallbackSceneTitles[scene] || "";
 }
 
 function connectorPointFor(position, compact, content) {
@@ -524,6 +525,16 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
   const lineGlowRef = useRef(null);
   const dotRefs = useRef([]);
   const dotGlowRefs = useRef([]);
+  const [connectionSeed, setConnectionSeed] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setConnectionSeed((current) => current + 1);
+    }, 760);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const network = useMemo(() => {
     const count = compact ? 30 : 48;
     const width = compact ? 8.9 : 15.2;
@@ -563,7 +574,11 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
       });
     });
 
-    links.sort((a, b) => a.distance - b.distance);
+    links.sort((a, b) => {
+      const aScore = a.distance - noise01(a.from * 17 + a.to * 31, connectionSeed) * (compact ? 0.68 : 1.1);
+      const bScore = b.distance - noise01(b.from * 17 + b.to * 31, connectionSeed) * (compact ? 0.68 : 1.1);
+      return aScore - bScore;
+    });
 
     const visibleLinks = links.slice(0, compact ? 56 : 96);
 
@@ -571,34 +586,43 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
       glowPositions: new Float32Array(visibleLinks.length * 6),
       links: visibleLinks,
       points,
-      positions: new Float32Array(visibleLinks.length * 6)
+      height,
+      positions: new Float32Array(visibleLinks.length * 6),
+      width
     };
-  }, [compact, variant]);
+  }, [compact, connectionSeed, variant]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
 
     const presence = THREE.MathUtils.clamp(opacity, 0, 1);
+    const cursor = new THREE.Vector2(pointer.x * network.width * 0.34, pointer.y * network.height * 0.34);
     groupRef.current.position.lerp(origin, 0.18);
     groupRef.current.rotation.z = Math.sin(clock.elapsedTime * 0.12) * 0.018;
 
     const animated = network.points.map((point, index) => {
       const driftX = Math.sin(clock.elapsedTime * point.speed + point.phase) * (compact ? 0.035 : 0.055);
       const driftY = Math.cos(clock.elapsedTime * (point.speed * 0.82) + point.phase) * (compact ? 0.028 : 0.045);
-      const current = new THREE.Vector3(point.x + driftX, point.y + driftY, point.z);
+      const cursorDistance = Math.hypot(point.x - cursor.x, point.y - cursor.y);
+      const cursorInfluence = THREE.MathUtils.clamp(1 - cursorDistance / (compact ? 1.9 : 3.1), 0, 1);
+      const current = new THREE.Vector3(
+        point.x + driftX + (cursor.x - point.x) * cursorInfluence * 0.055,
+        point.y + driftY + (cursor.y - point.y) * cursorInfluence * 0.055,
+        point.z
+      );
       const dot = dotRefs.current[index];
 
       if (dot) {
         dot.position.copy(current);
-        dot.scale.setScalar(0.82 + Math.sin(clock.elapsedTime * 0.7 + point.phase) * 0.14);
-        dot.material.opacity = THREE.MathUtils.lerp(dot.material.opacity, presence * (index % 5 === 0 ? 0.58 : 0.38) * (1 - point.centerWeight * 0.5), 0.1);
+        dot.scale.setScalar(0.82 + cursorInfluence * 0.46 + Math.sin(clock.elapsedTime * 0.7 + point.phase) * 0.14);
+        dot.material.opacity = THREE.MathUtils.lerp(dot.material.opacity, presence * (index % 5 === 0 ? 0.58 : 0.38) * (1 - point.centerWeight * 0.5) * (1 + cursorInfluence * 0.85), 0.1);
       }
 
       const glow = dotGlowRefs.current[index];
       if (glow) {
         glow.position.copy(current);
-        glow.scale.setScalar(1.1 + Math.sin(clock.elapsedTime * 0.55 + point.phase) * 0.18);
-        glow.material.opacity = THREE.MathUtils.lerp(glow.material.opacity, presence * (index % 5 === 0 ? 0.18 : 0.1) * (1 - point.centerWeight * 0.42), 0.1);
+        glow.scale.setScalar(1.1 + cursorInfluence * 0.95 + Math.sin(clock.elapsedTime * 0.55 + point.phase) * 0.18);
+        glow.material.opacity = THREE.MathUtils.lerp(glow.material.opacity, presence * (index % 5 === 0 ? 0.18 : 0.1) * (1 - point.centerWeight * 0.42) * (1 + cursorInfluence * 1.3), 0.1);
       }
 
       return current;

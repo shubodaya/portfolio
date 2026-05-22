@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const networkNodes = [
   [0, 18, 1.06],
@@ -37,7 +37,11 @@ const networkNodes = [
   [155, 93, 0.98]
 ];
 
-function createNetworkLinks(nodes) {
+function seededNoise(index, seed) {
+  return Math.sin(index * 91.7 + seed * 17.13) * 0.5 + 0.5;
+}
+
+function createNetworkLinks(nodes, seed = 0) {
   const links = [];
   const linkKeys = new Set();
   const addLink = (from, to, distance) => {
@@ -58,21 +62,34 @@ function createNetworkLinks(nodes) {
       const to = from + offset + 1;
       const distance = Math.hypot(x1 - x2, y1 - y2);
 
-      if (distance < 31) {
+      if (distance < 35) {
         addLink(from, to, distance);
       }
     });
   });
 
   return links
-    .sort((a, b) => a[2] - b[2])
-    .slice(0, 72)
+    .map((link, index) => [...link, link[2] - seededNoise(index, seed) * 8])
+    .sort((a, b) => a[3] - b[3])
+    .slice(0, 92)
     .map(([from, to]) => [from, to]);
 }
 
-const networkLinks = createNetworkLinks(networkNodes);
-
 function LogoNetworkBackdrop() {
+  const [linkSeed, setLinkSeed] = useState(0);
+  const networkLinks = useMemo(() => createNetworkLinks(networkNodes, linkSeed), [linkSeed]);
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setLinkSeed((current) => current + 1);
+    }, 820);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   return (
     <svg className="logo-intro__network" viewBox="0 0 160 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
       <defs>
@@ -127,6 +144,8 @@ function LogoNetworkBackdrop() {
 }
 
 export function LogoIntro({ onComplete }) {
+  const rootRef = useRef(null);
+
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(onComplete, reduceMotion ? 700 : 2450);
@@ -134,8 +153,31 @@ export function LogoIntro({ onComplete }) {
     return () => window.clearTimeout(timer);
   }, [onComplete]);
 
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+
+    const handlePointerMove = (event) => {
+      root.style.setProperty("--network-cursor-x", `${event.clientX}px`);
+      root.style.setProperty("--network-cursor-y", `${event.clientY}px`);
+      root.style.setProperty("--network-cursor-opacity", "1");
+    };
+    const handlePointerLeave = () => {
+      root.style.setProperty("--network-cursor-opacity", "0");
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerleave", handlePointerLeave);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerleave", handlePointerLeave);
+    };
+  }, []);
+
   return (
     <motion.div
+      ref={rootRef}
       aria-label="Loading Shubodaya Kumar portfolio"
       className="logo-intro"
       exit={{

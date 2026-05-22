@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { defaultThreeDContent, getMergedThreeDContent } from "../data/threeDContent";
 import { defaultSiteContent, getMergedSiteContent } from "./data/siteData";
 import { defaultProjects, getMergedProjects, projectCategories } from "./data/projectCatalog";
-import { fetchPublicSiteContent } from "./siteApi";
+import { SITE_CONTENT_UPDATED_CHANNEL, fetchPublicSiteContent } from "./siteApi";
 
 const isRecord = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -73,6 +73,38 @@ export function SiteContentProvider({ children }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const refreshQuietly = () => {
+      refreshContent().catch(() => {});
+    };
+    const handleStorage = (event) => {
+      if (event.key === SITE_CONTENT_UPDATED_CHANNEL) {
+        refreshQuietly();
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshQuietly();
+      }
+    };
+    const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(SITE_CONTENT_UPDATED_CHANNEL) : null;
+
+    if (channel) {
+      channel.onmessage = refreshQuietly;
+    }
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", refreshQuietly);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      channel?.close();
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", refreshQuietly);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refreshContent]);
 
   const siteContent = useMemo(
     () => getMergedSiteContent(remoteContent.siteContent),
