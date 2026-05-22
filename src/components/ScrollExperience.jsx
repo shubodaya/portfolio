@@ -1,4 +1,5 @@
 import { Hero } from "./Hero.jsx";
+import { JourneyNetworkBackdrop } from "./JourneyNetworkBackdrop.jsx";
 import { profile, routeNodes } from "../data/profileData.js";
 import { ContactGlyph } from "../twod/components/ContactGlyph.jsx";
 
@@ -37,6 +38,7 @@ export function ScrollExperience({ hero, profile: profileContent = profile, rout
         </SceneSection>
       ))}
       <section className="story-section story-section--outro" data-scene-section id="outro" aria-label="S outro">
+        <JourneyNetworkBackdrop className="outro-journey-network" density={1} opacity={0.46} />
         <div className="outro-message">
           <p>Network security, infrastructure support, and technical troubleshooting.</p>
           <strong>{profileContent.email}</strong>
