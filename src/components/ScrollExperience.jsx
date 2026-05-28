@@ -75,6 +75,10 @@ export function ScrollExperience({ hero, profile: profileContent = profile, rout
           ))}
         </nav>
         <footer className="site-footer" aria-label="Website footer">
+          <a className="site-footer__mark" href="/" aria-label="Back to home">
+            S
+          </a>
+          <span className="site-footer__rule" aria-hidden="true" />
           <div className="site-footer__statement">
             <p>Behind every reliable business is a network someone carefully protects.</p>
             <span>Network security, infrastructure support, and practical troubleshooting.</span>
