@@ -156,6 +156,10 @@ function getOutroLogoPoint(curve, compact) {
   return vectorFrom(getCurvePoint(curve, "outro"), [0, compact ? 0.48 : 0.62, 0.54]);
 }
 
+function getFooterOutroLogoPoint(curve, compact) {
+  return vectorFrom(getCurvePoint(curve, "outro"), [0, compact ? 3.48 : 1.78, 0.54]);
+}
+
 function updateTubeDrawRange(mesh, reveal) {
   if (!mesh?.geometry) return;
   const count = mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count;
@@ -1176,7 +1180,7 @@ function RunwayTiles({ compact, curve, fibrePresence, fibreProgress, navigate, s
 function ContactOutroS({ activeScene, compact, curve, navigate, scrollProgress }) {
   const reform = getOutroLogoPresence(scrollProgress);
   const active = activeScene === "outro" || reform > 0.55;
-  const point = useMemo(() => getOutroLogoPoint(curve, compact), [compact, curve]);
+  const point = useMemo(() => getFooterOutroLogoPoint(curve, compact), [compact, curve]);
 
   if (reform <= 0.01 && activeScene !== "contact" && activeScene !== "outro") return null;
 
@@ -1213,7 +1217,7 @@ function SceneLights({ activeScene, curve }) {
 function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDContent }) {
   const curve = useMemo(() => createFibreCurve(compact), [compact]);
   const heroSPoint = useMemo(() => getHeroLogoPoint(curve, compact), [compact, curve]);
-  const outroSPoint = useMemo(() => getOutroLogoPoint(curve, compact), [compact, curve]);
+  const outroSPoint = useMemo(() => getFooterOutroLogoPoint(curve, compact), [compact, curve]);
   const fibrePresence = getFibrePresence(scrollProgress);
   const fibreProgress = getFibreSignalProgress(scrollProgress);
   const heroSPresence = getHeroLogoPresence(scrollProgress);
