@@ -855,7 +855,8 @@ button {
     border-color 180ms ease,
     box-shadow 180ms ease,
     color 180ms ease,
-    transform 180ms ease;
+    transform 180ms ease,
+    translate 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .overlay-actions a:first-child {
