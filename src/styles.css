@@ -773,7 +773,13 @@ button {
 .hero-overlay h1 {
   margin: 0.9rem 0 0;
   max-width: 690px;
-  font-size: clamp(2.2rem, 3.7vw, 3.95rem);
+  /* Ceiling reached ~1340px, matching where .hero-overlay__copy's own
+     width (min(100%, 41rem)) has already plateaued (~610px content width
+     from ~768px viewport up) — keeps font-size and available width
+     scaling together instead of the font still growing after the column
+     stopped, which broke "SHUBODAYA KUMAR" onto a second line at
+     1728-1920px viewports. */
+  font-size: clamp(2.2rem, 4.3vw, 3.6rem);
   font-weight: 950;
   letter-spacing: 0;
   line-height: 0.9;
