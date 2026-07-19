@@ -15,9 +15,12 @@ import {
   getCurvePoint,
   getFibreFocusScene,
   getFibreSignalProgress,
+  getFibreTilePoint,
   getFibreTileState,
   getSceneIndex
 } from "./FibreCable.jsx";
+import { FeatureModel } from "./FeatureModel.jsx";
+import { PacketLights } from "./PacketLights.jsx";
 import { SMark3D } from "./SMark3D.jsx";
 
 const COLORS = {
@@ -1214,6 +1217,18 @@ function SceneLights({ activeScene, curve }) {
   );
 }
 
+function getOrbitAnchor(curve, scene, compact, angleOffset, radius) {
+  // Must anchor off the same FIBRE_TILE_POINTS progress the tiles themselves
+  // use (getTilePosition), not SECTION_STOPS/getCurvePoint's stop table --
+  // those two tables disagree (e.g. projects: 0.455 vs 0.39), which put an
+  // earlier version of this anchor well off the tile's actual position.
+  const tilePoint = getFibreTilePoint(scene);
+  const point = curve.getPointAt(tilePoint?.progress ?? SECTION_STOPS[scene] ?? 0);
+  const angle = (focusAngles[scene] ?? 1.15) + angleOffset;
+  const r = compact ? radius * 0.62 : radius;
+  return new THREE.Vector3(point.x + Math.cos(angle) * r, point.y + 0.18, point.z + Math.sin(angle) * r);
+}
+
 function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDContent }) {
   const curve = useMemo(() => createFibreCurve(compact), [compact]);
   const heroSPoint = useMemo(() => getHeroLogoPoint(curve, compact), [compact, curve]);
@@ -1224,6 +1239,13 @@ function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDC
   const visualScene = getVisualScene(activeScene, scrollProgress);
   const showHeroS = heroSPresence > 0.01;
   const heroSScale = compact ? 1.5 : 1.85;
+  // Real, imported GLTF models (see FeatureModel.jsx) parked on the opposite side
+  // of the fibre from where each section's info tile orbits, so they read as
+  // companion objects attached to the cable rather than competing with the tile.
+  const laptopAnchor = useMemo(() => getOrbitAnchor(curve, "projects", compact, Math.PI * 0.55, 1.85), [compact, curve]);
+  const padlockAnchor = useMemo(() => getOrbitAnchor(curve, "certifications", compact, Math.PI * 0.55, 1.7), [compact, curve]);
+  const laptopActivation = getFibreTileState("projects", fibreProgress).activation;
+  const padlockActivation = getFibreTileState("certifications", fibreProgress).activation;
 
   return (
     <>
@@ -1247,6 +1269,22 @@ function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDC
       ) : null}
       <LogoFibreEmission compact={compact} curve={curve} mode="intro" originPoint={heroSPoint} scrollProgress={scrollProgress} />
       <FibreCable compact={compact} curve={curve} presence={fibrePresence} scrollProgress={scrollProgress} signalProgress={fibreProgress} />
+      <PacketLights curve={curve} scrollProgress={scrollProgress} />
+      <FeatureModel
+        activation={laptopActivation * fibrePresence}
+        color={COLORS.violet}
+        modelPath="/models/laptop.glb"
+        position={laptopAnchor}
+        scale={compact ? 1.1 : 1.9}
+      />
+      <FeatureModel
+        activation={padlockActivation * fibrePresence}
+        color={COLORS.mint}
+        modelPath="/models/padlock.glb"
+        position={padlockAnchor}
+        scale={compact ? 1.35 : 2.3}
+        spinSpeed={0.32}
+      />
       <RunwayTiles compact={compact} curve={curve} fibrePresence={fibrePresence} fibreProgress={fibreProgress} navigate={navigate} scrollProgress={scrollProgress} threeDContent={threeDContent} />
       <LogoFibreEmission compact={compact} curve={curve} mode="outro" originPoint={outroSPoint} scrollProgress={scrollProgress} />
       <ContactOutroS activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} scrollProgress={scrollProgress} />
