@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteContentData } from "../SiteContentContext";
+import { ContactForm } from "../components/ContactForm";
 import { ContactGlyph } from "../components/ContactGlyph";
 
 const homepageProjectCategories = new Set([
@@ -524,27 +525,31 @@ export function HomePage() {
 
       <section className="section section--cta" id="contact">
         <div className="contact-cta" data-reveal>
-          <div>
-            <p className="eyebrow">{sectionCopy.contact.eyebrow}</p>
-            <h2>{sectionCopy.contact.title}</h2>
-            <p>{sectionCopy.contact.body}</p>
+          <div className="contact-cta__intro">
+            <div>
+              <p className="eyebrow">{sectionCopy.contact.eyebrow}</p>
+              <h2>{sectionCopy.contact.title}</h2>
+              <p>{sectionCopy.contact.body}</p>
+            </div>
+
+            <div className="contact-icon-grid" aria-label="Contact links">
+              {contactActions.map((item) => (
+                <a
+                  className="contact-icon"
+                  href={item.href}
+                  key={item.label}
+                  target={item.href.startsWith("http") ? "_blank" : undefined}
+                  rel={item.href.startsWith("http") ? "noreferrer" : undefined}
+                  aria-label={item.label}
+                  title={item.label}
+                >
+                  <ContactGlyph kind={item.kind} />
+                </a>
+              ))}
+            </div>
           </div>
 
-          <div className="contact-icon-grid" aria-label="Contact links">
-            {contactActions.map((item) => (
-              <a
-                className="contact-icon"
-                href={item.href}
-                key={item.label}
-                target={item.href.startsWith("http") ? "_blank" : undefined}
-                rel={item.href.startsWith("http") ? "noreferrer" : undefined}
-                aria-label={item.label}
-                title={item.label}
-              >
-                <ContactGlyph kind={item.kind} />
-              </a>
-            ))}
-          </div>
+          <ContactForm />
         </div>
       </section>
     </>
