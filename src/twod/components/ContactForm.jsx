@@ -42,6 +42,7 @@ export function ContactForm() {
       action="https://formsubmit.co/contact@shubodaya.dev"
       className="contact-form"
       method="POST"
+      onInput={() => status && setStatus(null)}
       onSubmit={handleSubmit}
     >
       <div className="field">
