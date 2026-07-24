@@ -1,12 +1,14 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
+import { scrollState } from "./scrollProgressStore.js";
 
-export function PacketLights({ count = 14, curve, scrollProgress }) {
+export function PacketLights({ count = 14, curve }) {
   const refs = useRef([]);
   const lightRefs = useRef([]);
 
   useFrame(({ clock }) => {
+    const scrollProgress = scrollState.progress;
     const ending = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.9, 0.985);
     const presence = THREE.MathUtils.smoothstep(scrollProgress, 0.075, 0.2) * ending;
     const reveal = THREE.MathUtils.clamp((scrollProgress - 0.03) * 1.12, 0.001, 1);

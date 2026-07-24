@@ -10,7 +10,7 @@ import * as THREE from "three";
 // ties it into the scene's neon language with a colored point light instead.
 // Presence/scale is driven by the same tile-activation value ContentTile3D
 // uses, so it reveals and recedes in step with its section.
-export function FeatureModel({ activation = 0, color = "#76ffbf", modelPath, position, scale = 1, spinSpeed = 0.22 }) {
+export function FeatureModel({ color = "#76ffbf", getActivation, modelPath, position, scale = 1, spinSpeed = 0.22 }) {
   const { scene: modelScene } = useGLTF(modelPath);
   // Community-sourced GLTFs are authored at wildly inconsistent native scales
   // and pivots (checked: one of these ships at ~950-unit size centered ~1400
@@ -49,7 +49,7 @@ export function FeatureModel({ activation = 0, color = "#76ffbf", modelPath, pos
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
-    const presence = THREE.MathUtils.clamp(activation, 0, 1);
+    const presence = THREE.MathUtils.clamp(getActivation ? getActivation() : 0, 0, 1);
     const target = presence * scale;
     groupRef.current.scale.setScalar(THREE.MathUtils.lerp(groupRef.current.scale.x, target, 0.1));
     groupRef.current.rotation.y = clock.elapsedTime * spinSpeed;

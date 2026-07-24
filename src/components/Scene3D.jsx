@@ -16,11 +16,11 @@ import {
   getFibreFocusScene,
   getFibreSignalProgress,
   getFibreTilePoint,
-  getFibreTileState,
-  getSceneIndex
+  getFibreTileState
 } from "./FibreCable.jsx";
 import { FeatureModel } from "./FeatureModel.jsx";
 import { PacketLights } from "./PacketLights.jsx";
+import { scrollState } from "./scrollProgressStore.js";
 import { SMark3D } from "./SMark3D.jsx";
 
 const COLORS = {
@@ -117,6 +117,13 @@ function getVisualScene(activeScene, scrollProgress) {
   if (scrollProgress > INTRO_SHUTTER.fibreStart) return getFibreFocusScene(getFibreSignalProgress(scrollProgress), "hero");
   if (scrollProgress < INTRO_SHUTTER.fibreStart) return "hero";
   return activeScene;
+}
+
+// Presence of the whole orbiting-tile field along the journey.
+function getTileFieldPresence(scrollProgress) {
+  const entryPresence = THREE.MathUtils.smoothstep(scrollProgress, 0.108, 0.135);
+  const outroFade = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.875, 0.93);
+  return entryPresence * outroFade * getFibrePresence(scrollProgress);
 }
 
 function useDisplayPrefs() {
@@ -221,11 +228,12 @@ function connectorPointFor(position, compact, content) {
   return position.clone().add(radial.multiplyScalar(-edgeDistance)).add(new THREE.Vector3(0, portY, 0.02));
 }
 
-function CameraRig({ activeScene, compact, curve, scrollProgress }) {
+function CameraRig({ activeScene, compact, curve }) {
   const desired = useMemo(() => new THREE.Vector3(), []);
   const look = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(({ camera, pointer }, delta) => {
+    const scrollProgress = scrollState.progress;
     const fibreProgress = getFibreSignalProgress(scrollProgress);
     const activeStop = getFibreTileState(activeScene, fibreProgress).progress ?? SECTION_STOPS[activeScene] ?? fibreProgress;
     const travel = THREE.MathUtils.clamp(THREE.MathUtils.lerp(fibreProgress, activeStop, 0.2), 0.02, 0.966);
@@ -262,27 +270,90 @@ function CameraRig({ activeScene, compact, curve, scrollProgress }) {
   return null;
 }
 
-function BranchCable({ activation = 0, branchTravel = 0, color = COLORS.cyan, curve, fromT, to, visible = true }) {
+const BRANCH_GLOW_RADIUS = 0.018;
+const BRANCH_CORE_RADIUS = 0.006;
+
+function BranchCable({ color = COLORS.cyan, compact, content, curve, scene }) {
+  const rootRef = useRef(null);
   const coreRef = useRef(null);
   const glowRef = useRef(null);
   const endpointRef = useRef(null);
   const packetRef = useRef(null);
   const packetGlowRef = useRef(null);
-  const branchCurve = useMemo(() => {
+  const fromT = useMemo(() => getFibreTileState(scene, 0).progress, [scene]);
+  const sceneIndex = useMemo(() => tileSceneOrder.indexOf(scene), [scene]);
+  // The branch endpoint follows the orbiting tile, so the tube shape changes
+  // while scrolling. One reusable curve gets its control points mutated in
+  // place, and the tube geometries are rebuilt only when the endpoint has
+  // actually moved — never from a React re-render.
+  // Seeded with distinct points so the placeholder tube geometry built at
+  // mount is non-degenerate; real points arrive on the first visible frame.
+  const branchCurve = useMemo(
+    () =>
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0.35, -0.12, 0),
+        new THREE.Vector3(0.7, 0.1, 0),
+        new THREE.Vector3(1, 0, 0)
+      ]),
+    []
+  );
+  const scratch = useMemo(
+    () => ({ lastEnd: new THREE.Vector3(Infinity, Infinity, Infinity), radial: new THREE.Vector3() }),
+    []
+  );
+
+  const rebuildBranch = (end) => {
+    if (scratch.lastEnd.distanceToSquared(end) < 0.000001) return;
+    scratch.lastEnd.copy(end);
+
     const start = curve.getPointAt(fromT);
-    const end = to.clone();
-    const radial = end.clone().sub(start);
-    radial.y = 0;
-    if (radial.lengthSq() < 0.001) radial.set(end.x >= start.x ? 1 : -1, 0, 0);
-    radial.normalize();
-    const midA = start.clone().add(radial.clone().multiplyScalar(0.72)).add(new THREE.Vector3(0, -0.12, 0));
-    const midB = end.clone().add(radial.clone().multiplyScalar(-0.5)).add(new THREE.Vector3(0, 0.1, 0));
-    return new THREE.CatmullRomCurve3([start, midA, midB, end]);
-  }, [curve, fromT, to]);
+    scratch.radial.copy(end).sub(start);
+    scratch.radial.y = 0;
+    if (scratch.radial.lengthSq() < 0.001) scratch.radial.set(end.x >= start.x ? 1 : -1, 0, 0);
+    scratch.radial.normalize();
+
+    branchCurve.points[0].copy(start);
+    branchCurve.points[1].copy(start).addScaledVector(scratch.radial, 0.72).add(new THREE.Vector3(0, -0.12, 0));
+    branchCurve.points[2].copy(end).addScaledVector(scratch.radial, -0.5).add(new THREE.Vector3(0, 0.1, 0));
+    branchCurve.points[3].copy(end);
+    branchCurve.updateArcLengths();
+
+    [
+      [glowRef.current, BRANCH_GLOW_RADIUS],
+      [coreRef.current, BRANCH_CORE_RADIUS]
+    ].forEach(([mesh, radius]) => {
+      if (!mesh) return;
+      const previous = mesh.geometry;
+      mesh.geometry = new THREE.TubeGeometry(branchCurve, 42, radius, 8, false);
+      previous?.dispose();
+    });
+  };
 
   useFrame(({ clock }) => {
-    const signal = visible ? THREE.MathUtils.clamp(activation, 0, 1) : 0;
-    const travel = THREE.MathUtils.clamp(branchTravel, 0, 1);
+    if (!rootRef.current) return;
+
+    const fibreProgress = getFibreSignalProgress(scrollState.progress);
+    const fieldPresence = getTileFieldPresence(scrollState.progress);
+    const tileState = getFibreTileState(scene, fibreProgress);
+    const activation = fieldPresence * tileState.activation;
+    const focusScene = getFibreFocusScene(fibreProgress, "hero");
+    const nearby = Math.abs(sceneIndex - tileSceneOrder.indexOf(focusScene)) <= 1;
+    const branchVisible =
+      fieldPresence > 0.08 &&
+      tileState.reached &&
+      tileState.distance <= FIBRE_BRANCH_RELEASE * 0.74 &&
+      (activation > 0.01 || nearby);
+
+    rootRef.current.visible = branchVisible;
+    if (!branchVisible) return;
+
+    const endpoint = connectorPointFor(getTilePosition(curve, scene, compact, fibreProgress), compact, { ...content, scene });
+    rebuildBranch(endpoint);
+    if (endpointRef.current) endpointRef.current.position.copy(endpoint);
+
+    const signal = THREE.MathUtils.clamp(activation, 0, 1);
+    const travel = THREE.MathUtils.clamp(tileState.branchTravel, 0, 1);
     const pulse = signal * (0.07 + Math.sin(clock.elapsedTime * 4 + fromT * 10) * 0.025);
     const endpointSignal = signal * THREE.MathUtils.smoothstep(travel, 0.76, 1);
     const packetSignal = signal * Math.sin(Math.min(1, travel) * Math.PI);
@@ -311,16 +382,16 @@ function BranchCable({ activation = 0, branchTravel = 0, color = COLORS.cyan, cu
   });
 
   return (
-    <>
+    <group ref={rootRef} visible={false}>
       <mesh ref={glowRef}>
-        <tubeGeometry args={[branchCurve, 42, 0.018, 8, false]} />
+        <tubeGeometry args={[branchCurve, 42, BRANCH_GLOW_RADIUS, 8, false]} />
         <meshBasicMaterial color={color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
       <mesh ref={coreRef}>
-        <tubeGeometry args={[branchCurve, 42, 0.006, 8, false]} />
+        <tubeGeometry args={[branchCurve, 42, BRANCH_CORE_RADIUS, 8, false]} />
         <meshStandardMaterial color="#061113" emissive={color} emissiveIntensity={0.2} metalness={0.5} opacity={0} roughness={0.22} transparent />
       </mesh>
-      <mesh ref={endpointRef} position={to}>
+      <mesh ref={endpointRef}>
         <boxGeometry args={[0.2, 0.075, 0.038]} />
         <meshBasicMaterial color={color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
@@ -332,66 +403,16 @@ function BranchCable({ activation = 0, branchTravel = 0, color = COLORS.cyan, cu
         <sphereGeometry args={[0.038, 14, 14]} />
         <meshBasicMaterial color="#ffffff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
-    </>
-  );
-}
-
-function ScrollReactiveBackground({ activeScene, compact, scrollProgress }) {
-  const groupRef = useRef(null);
-  const pointsGeometry = useMemo(() => {
-    const positions = [];
-    const nodeCount = compact ? 18 : 30;
-    const yTop = compact ? 5.3 : 6.2;
-    const yBottom = compact ? -15.2 : -18.1;
-
-    for (let index = 0; index < nodeCount; index += 1) {
-      const t = index / Math.max(1, nodeCount - 1);
-      const angle = index * 1.72;
-      const radius = (compact ? 2.15 : 4.2) + noise01(index, 2) * (compact ? 0.9 : 1.8);
-      positions.push(
-        Math.cos(angle) * radius,
-        THREE.MathUtils.lerp(yTop, yBottom, t) + Math.sin(index * 0.9) * (compact ? 0.16 : 0.34),
-        Math.sin(angle) * radius * 0.72
-      );
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    return geometry;
-  }, [compact]);
-  useFrame(({ clock }) => {
-    if (!groupRef.current) return;
-    const section = getSceneIndex(activeScene);
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, scrollProgress * Math.PI * 0.16, 0.035);
-    groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, Math.sin(scrollProgress * Math.PI * 2) * 0.12, 0.04);
-    groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, 0, 0.04);
-    groupRef.current.children.forEach((child, index) => {
-      if (child.material) {
-        const outroFade = activeScene === "outro" ? 0.22 : 1;
-        child.material.opacity = outroFade * (0.028 + Math.sin(clock.elapsedTime * 0.8 + section + index) * 0.01);
-      }
-    });
-  });
-
-  return (
-    <group ref={groupRef}>
-      <points geometry={pointsGeometry}>
-        <pointsMaterial
-          color="#7af8ff"
-          size={compact ? 0.035 : 0.05}
-          sizeAttenuation
-          transparent
-          opacity={0.045}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </points>
     </group>
   );
 }
 
-function TilePhotoLayer({ active, height, image, width }) {
+// The tile layers read the owning tile's live activation from a shared ref
+// (written by ContentTile3D's frame loop) so their materials update without
+// React re-renders.
+function TilePhotoLayer({ activationRef, height, image, width }) {
   const texture = useTexture(image);
+  const materialRef = useRef(null);
 
   useEffect(() => {
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -399,24 +420,41 @@ function TilePhotoLayer({ active, height, image, width }) {
     texture.needsUpdate = true;
   }, [texture]);
 
+  useFrame(() => {
+    if (!materialRef.current) return;
+    const active = activationRef.current > 0.08;
+    materialRef.current.opacity = THREE.MathUtils.lerp(materialRef.current.opacity, active ? 0.028 : 0.012, 0.12);
+  });
+
   return (
     <mesh position={[0, 0, 0.045]} renderOrder={2}>
       <planeGeometry args={[width - 0.18, height - 0.18]} />
-      <meshBasicMaterial color="#d7fff7" depthWrite={false} map={texture} opacity={active ? 0.028 : 0.012} transparent />
+      <meshBasicMaterial color="#d7fff7" depthWrite={false} map={texture} opacity={0.012} ref={materialRef} transparent />
     </mesh>
   );
 }
 
-function TileReadabilityLayer({ active, height, width }) {
+function TileReadabilityLayer({ activationRef, height, width }) {
+  const materialRef = useRef(null);
+
+  useFrame(() => {
+    if (!materialRef.current) return;
+    const active = activationRef.current > 0.08;
+    materialRef.current.opacity = THREE.MathUtils.lerp(materialRef.current.opacity, active ? 0.68 : 0.34, 0.12);
+  });
+
   return (
     <RoundedBox args={[width - 0.28, height - 0.34, 0.018]} position={[0, -0.02, 0.058]} radius={0.052} smoothness={5} renderOrder={3}>
-      <meshBasicMaterial color="#02080b" depthWrite={false} opacity={active ? 0.68 : 0.34} transparent />
+      <meshBasicMaterial color="#02080b" depthWrite={false} opacity={0.34} ref={materialRef} transparent />
     </RoundedBox>
   );
 }
 
-function TileLogoLayer({ active, color, compact, icon, titleTop, width }) {
+function TileLogoLayer({ activationRef, color, compact, icon, titleTop, width }) {
   const texture = useTexture(icon);
+  const backingRef = useRef(null);
+  const logoRef = useRef(null);
+  const ringRef = useRef(null);
   const logoWidth = compact ? 0.56 : 0.72;
   const logoHeight = compact ? 0.36 : 0.48;
   const x = -width / 2 + 0.18 + logoWidth / 2;
@@ -428,29 +466,43 @@ function TileLogoLayer({ active, color, compact, icon, titleTop, width }) {
     texture.needsUpdate = true;
   }, [texture]);
 
+  useFrame(() => {
+    const active = activationRef.current > 0.08;
+    if (backingRef.current) {
+      backingRef.current.opacity = THREE.MathUtils.lerp(backingRef.current.opacity, active ? 0.66 : 0.28, 0.12);
+    }
+    if (logoRef.current) {
+      logoRef.current.opacity = THREE.MathUtils.lerp(logoRef.current.opacity, active ? 0.86 : 0.38, 0.12);
+    }
+    if (ringRef.current) {
+      ringRef.current.opacity = THREE.MathUtils.lerp(ringRef.current.opacity, active ? 0.1 : 0.03, 0.12);
+    }
+  });
+
   return (
     <group position={[x, y, 0.095]} renderOrder={8}>
       <RoundedBox args={[logoWidth + 0.04, logoHeight + 0.04, 0.026]} radius={0.035} smoothness={5}>
-        <meshBasicMaterial color="#061014" opacity={active ? 0.66 : 0.28} transparent depthWrite={false} />
+        <meshBasicMaterial color="#061014" opacity={0.28} ref={backingRef} transparent depthWrite={false} />
       </RoundedBox>
       <mesh position={[0, 0, 0.018]}>
         <planeGeometry args={[logoWidth, logoHeight]} />
-        <meshBasicMaterial map={texture} opacity={active ? 0.86 : 0.38} transparent depthWrite={false} />
+        <meshBasicMaterial map={texture} opacity={0.38} ref={logoRef} transparent depthWrite={false} />
       </mesh>
       <RoundedBox args={[logoWidth + 0.075, logoHeight + 0.075, 0.016]} position={[0, 0, -0.015]} radius={0.045} smoothness={5}>
-        <meshBasicMaterial color={color} transparent opacity={active ? 0.1 : 0.03} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial color={color} transparent opacity={0.03} ref={ringRef} blending={THREE.AdditiveBlending} depthWrite={false} />
       </RoundedBox>
     </group>
   );
 }
 
-function TileSignalRail({ active, color, compact, height, lineCount, width }) {
+function TileSignalRail({ activationRef, color, compact, height, lineCount, width }) {
   const railRefs = useRef([]);
   const count = Math.min(compact ? 5 : 7, Math.max(4, lineCount + 1));
   const railHeight = height - (compact ? 0.78 : 0.92);
   const top = railHeight / 2;
 
   useFrame(({ clock }) => {
+    const active = activationRef.current > 0.08;
     railRefs.current.forEach((rail, index) => {
       if (!rail) return;
       const pulse = 0.5 + Math.sin(clock.elapsedTime * 2.2 + index * 0.74) * 0.5;
@@ -482,51 +534,7 @@ function TileSignalRail({ active, color, compact, height, lineCount, width }) {
   );
 }
 
-function SectionGate({ activeScene, compact, curve, scrollProgress }) {
-  const groupRef = useRef(null);
-  const ringRefs = useRef([]);
-  const lightRef = useRef(null);
-  const point = useMemo(() => getCurvePoint(curve, activeScene), [activeScene, curve]);
-  const color = sectionColors[activeScene] ?? COLORS.cyan;
-  const hidden = activeScene === "hero" || activeScene === "outro";
-
-  useFrame(({ clock }) => {
-    if (!groupRef.current) return;
-    const gatePresence = hidden ? 0 : THREE.MathUtils.smoothstep(scrollProgress, 0.08, 0.94);
-    const pulse = 0.5 + Math.sin(clock.elapsedTime * 2.4 + getSceneIndex(activeScene)) * 0.5;
-    groupRef.current.rotation.z += compact ? 0.0022 : 0.0034;
-    groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, Math.sin(clock.elapsedTime * 0.6) * 0.08, 0.04);
-    ringRefs.current.forEach((ring, index) => {
-      if (!ring) return;
-      ring.material.opacity = THREE.MathUtils.lerp(ring.material.opacity, gatePresence * (0.12 + pulse * 0.12 - index * 0.025), 0.08);
-      ring.scale.setScalar(THREE.MathUtils.lerp(ring.scale.x, 1 + pulse * 0.18 + index * 0.16, 0.08));
-      ring.rotation.z += 0.002 + index * 0.001;
-    });
-    if (lightRef.current) {
-      lightRef.current.intensity = gatePresence * (0.18 + pulse * 0.7);
-    }
-  });
-
-  return (
-    <group ref={groupRef} position={[point.x, point.y, point.z + 0.02]}>
-      {[0, 1, 2].map((index) => (
-        <mesh
-          key={index}
-          ref={(node) => {
-            if (node) ringRefs.current[index] = node;
-          }}
-          rotation={[Math.PI / 2 + index * 0.16, index * 0.22, 0]}
-        >
-          <torusGeometry args={[compact ? 0.28 + index * 0.09 : 0.36 + index * 0.12, 0.006, 8, 64]} />
-          <meshBasicMaterial color={color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
-        </mesh>
-      ))}
-      <pointLight color={color} distance={compact ? 2.4 : 3.4} intensity={0} ref={lightRef} />
-    </group>
-  );
-}
-
-function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
+function SNetworkBackdrop({ compact, getOpacity, origin, variant = "hero" }) {
   const groupRef = useRef(null);
   const lineRef = useRef(null);
   const lineGlowRef = useRef(null);
@@ -581,10 +589,16 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
   useFrame(({ clock, pointer }, delta) => {
     if (!groupRef.current) return;
 
-    const presence = THREE.MathUtils.clamp(opacity, 0, 1);
+    const presence = THREE.MathUtils.clamp(getOpacity(), 0, 1);
+    // Skip the whole n² link pass while this backdrop is invisible.
+    if (presence <= 0.01) {
+      groupRef.current.visible = false;
+      return;
+    }
+    groupRef.current.visible = true;
+
     const elapsed = clock.elapsedTime;
     const cursor = new THREE.Vector2(pointer.x * network.width * 0.32, pointer.y * network.height * 0.32);
-    groupRef.current.visible = presence > 0.01;
     groupRef.current.position.lerp(origin, 0.18);
     groupRef.current.rotation.z = Math.sin(elapsed * 0.08 + (variant === "outro" ? 0.6 : 0)) * 0.01;
 
@@ -696,8 +710,9 @@ function SNetworkBackdrop({ compact, opacity = 1, origin, variant = "hero" }) {
   );
 }
 
-function LogoFibreEmission({ compact, curve, mode = "intro", originPoint, scrollProgress }) {
+function LogoFibreEmission({ compact, curve, mode = "intro", originPoint }) {
   const refs = useRef([]);
+  const groupRef = useRef(null);
   const isIntro = mode === "intro";
   const origin = useMemo(() => {
     if (originPoint) return originPoint.clone();
@@ -740,6 +755,7 @@ function LogoFibreEmission({ compact, curve, mode = "intro", originPoint, scroll
   );
 
   useFrame(({ clock }) => {
+    const scrollProgress = scrollState.progress;
     const introBirth = THREE.MathUtils.smoothstep(scrollProgress, 0.026, 0.074);
     const introScatter = THREE.MathUtils.smoothstep(scrollProgress, 0.045, 0.112);
     const introCable = THREE.MathUtils.smoothstep(scrollProgress, 0.096, 0.18);
@@ -748,6 +764,11 @@ function LogoFibreEmission({ compact, curve, mode = "intro", originPoint, scroll
     const outroGather = THREE.MathUtils.smoothstep(scrollProgress, 0.914, 0.976);
     const outroFade = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.988, 1);
     const presence = isIntro ? introBirth * introFade : outroBirth * outroFade;
+
+    if (groupRef.current) {
+      groupRef.current.visible = presence > 0.001;
+      if (presence <= 0.001) return;
+    }
 
     refs.current.forEach((node, index) => {
       if (!node) return;
@@ -778,7 +799,7 @@ function LogoFibreEmission({ compact, curve, mode = "intro", originPoint, scroll
   });
 
   return (
-    <group>
+    <group ref={groupRef}>
       {particles.map((particle, index) => (
         <mesh
           key={`logo-emission-${index}`}
@@ -887,10 +908,16 @@ function getTileMetrics({ body, compact, lines = [], scene, title, typography })
   };
 }
 
-function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href, icon, image, kicker, lines = [], navigate, position, presence = 1, scene, side = 1, title, typography }) {
+function ContentTile3D({ body, color, compact, curve, href, icon, image, kicker, lines = [], navigate, scene, title, typography }) {
   const groupRef = useRef(null);
   const panelRef = useRef(null);
   const glowRef = useRef(null);
+  const portRef = useRef(null);
+  const buttonGlowRef = useRef(null);
+  const buttonPanelRef = useRef(null);
+  const activationRef = useRef(0);
+  const presenceRef = useRef(0);
+  const wasVisibleRef = useRef(false);
   const isHero = false;
   const { bodyScale, buttonScale, kickerScale, lineHeightScale, titleScale } = getTileTypography(typography);
   const { dense, height, longTitle, scale: activeScale, width } = getTileMetrics({ body, compact, lines, scene, title, typography });
@@ -902,7 +929,6 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
   const kickerSize = (compact ? 0.1 : isHero ? 0.118 : dense ? 0.122 : 0.138) * kickerScale;
   const ctaSize = (compact ? 0.102 : 0.142) * buttonScale;
   const bulletItems = lines.map(cleanBulletText).filter(Boolean);
-  const portX = position.x >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
   const portY = -height / 2 + (compact ? 0.44 : 0.58);
   const hasIcon = Boolean(icon);
   const logoReserve = hasIcon ? (compact ? 0.66 : 0.84) : 0;
@@ -936,15 +962,40 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
 
   useFrame(({ clock, pointer }) => {
     if (!groupRef.current) return;
-    const activeAmount = THREE.MathUtils.clamp(activation, 0, 1);
+
+    const fibreProgress = getFibreSignalProgress(scrollState.progress);
+    const fieldPresence = getTileFieldPresence(scrollState.progress);
+    const tileState = getFibreTileState(scene, fibreProgress);
+    const presence = fieldPresence;
+    const activeAmount = THREE.MathUtils.clamp(fieldPresence * tileState.activation, 0, 1);
+    presenceRef.current = presence;
+    activationRef.current = activeAmount;
+
+    if (presence <= 0.005) {
+      groupRef.current.visible = false;
+      wasVisibleRef.current = false;
+      return;
+    }
+    groupRef.current.visible = true;
+
+    const position = getTilePosition(curve, scene, compact, fibreProgress);
+    const faceYaw = getTileFaceYaw(position, compact);
+    const side = position.x >= 0 ? 1 : -1;
     const inactiveScale = compact ? 0.34 : 0.34;
     const targetScale = presence * THREE.MathUtils.lerp(inactiveScale, activeScale, activeAmount);
+    const targetYaw = faceYaw + side * THREE.MathUtils.lerp(0.34, 0.02, activeAmount) + pointer.x * 0.018;
+
+    // Snap into place on the frame the tile field appears so it doesn't
+    // visibly fly in from wherever it was last parked.
+    if (!wasVisibleRef.current) {
+      wasVisibleRef.current = true;
+      groupRef.current.position.copy(position);
+      groupRef.current.rotation.y = targetYaw;
+      groupRef.current.scale.setScalar(Math.max(0.001, targetScale));
+    }
+
     groupRef.current.scale.setScalar(THREE.MathUtils.lerp(groupRef.current.scale.x, targetScale, 0.16));
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(
-      groupRef.current.rotation.y,
-      faceYaw + side * THREE.MathUtils.lerp(0.34, 0.02, activeAmount) + pointer.x * 0.018,
-      0.08
-    );
+    groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, targetYaw, 0.08);
     groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, pointer.y * -0.018, 0.05);
     groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, position.x, 0.14);
     groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, position.y + Math.sin(clock.elapsedTime * 1.1 + position.x) * 0.01, 0.14);
@@ -957,18 +1008,26 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
     if (glowRef.current) {
       glowRef.current.material.opacity = THREE.MathUtils.lerp(glowRef.current.material.opacity, presence * THREE.MathUtils.lerp(0.018, 0.16, activeAmount), 0.08);
     }
+    if (portRef.current) {
+      portRef.current.position.x = side >= 0 ? -width / 2 + 0.08 : width / 2 - 0.08;
+      portRef.current.material.opacity = presence * THREE.MathUtils.lerp(0.16, 0.68, activeAmount);
+    }
+    if (buttonGlowRef.current) {
+      buttonGlowRef.current.opacity = presence * THREE.MathUtils.lerp(0.2, 0.44, activeAmount);
+    }
+    if (buttonPanelRef.current) {
+      buttonPanelRef.current.emissiveIntensity = THREE.MathUtils.lerp(0.08, 0.26, activeAmount);
+    }
   });
-
-  const activeVisual = activation > 0.08;
 
   return (
     <group
       ref={groupRef}
-      position={position}
-      scale={presence * THREE.MathUtils.lerp(compact ? 0.34 : 0.34, activeScale, THREE.MathUtils.clamp(activation, 0, 1))}
+      scale={0.001}
+      visible={false}
       onClick={(event) => {
         event.stopPropagation();
-        if (!href || presence < 0.18) return;
+        if (!href || presenceRef.current < 0.18) return;
         if (href.startsWith("/")) {
           if (href === "/" && window.location.pathname === "/") {
             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -984,7 +1043,7 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
       }}
       onPointerOver={(event) => {
         event.stopPropagation();
-        document.body.style.cursor = href && presence >= 0.18 ? "pointer" : "";
+        document.body.style.cursor = href && presenceRef.current >= 0.18 ? "pointer" : "";
       }}
     >
       <mesh position={[0, 0, 0.14]} renderOrder={8}>
@@ -1005,13 +1064,13 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
       <RoundedBox ref={glowRef} args={[width + 0.08, height + 0.08, 0.028]} position={[0, 0, -0.05]} radius={0.08} smoothness={6}>
         <meshBasicMaterial color={color} transparent opacity={0.05} blending={THREE.AdditiveBlending} depthWrite={false} />
       </RoundedBox>
-      <TilePhotoLayer active={activeVisual} height={height} image={image} width={width} />
-      <TileReadabilityLayer active={activeVisual} height={height} width={width} />
-      {hasIcon ? <TileLogoLayer active={activeVisual} color={color} compact={compact} icon={icon} titleTop={titleTop} width={width} /> : null}
-      <TileSignalRail active={activeVisual} color={color} compact={compact} height={height} lineCount={lines.length} width={width} />
-      <mesh position={[portX, portY, 0.115]} renderOrder={7}>
+      <TilePhotoLayer activationRef={activationRef} height={height} image={image} width={width} />
+      <TileReadabilityLayer activationRef={activationRef} height={height} width={width} />
+      {hasIcon ? <TileLogoLayer activationRef={activationRef} color={color} compact={compact} icon={icon} titleTop={titleTop} width={width} /> : null}
+      <TileSignalRail activationRef={activationRef} color={color} compact={compact} height={height} lineCount={lines.length} width={width} />
+      <mesh position={[0, portY, 0.115]} ref={portRef} renderOrder={7}>
         <boxGeometry args={[0.18, 0.072, 0.042]} />
-        <meshBasicMaterial color={color} transparent opacity={presence * THREE.MathUtils.lerp(0.16, 0.68, THREE.MathUtils.clamp(activation, 0, 1))} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial color={color} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
       {hasKicker ? (
         <Text
@@ -1087,10 +1146,10 @@ function ContentTile3D({ activation = 0, body, color, compact, faceYaw = 0, href
       {showOpenButton ? (
         <group position={[0, buttonY, 0.105]} renderOrder={9}>
           <RoundedBox args={[buttonWidth, buttonHeight, 0.038]} radius={0.055} smoothness={5}>
-            <meshBasicMaterial color={color} transparent opacity={presence * THREE.MathUtils.lerp(0.2, 0.44, THREE.MathUtils.clamp(activation, 0, 1))} blending={THREE.AdditiveBlending} depthWrite={false} />
+            <meshBasicMaterial color={color} transparent opacity={0} ref={buttonGlowRef} blending={THREE.AdditiveBlending} depthWrite={false} />
           </RoundedBox>
           <RoundedBox args={[buttonWidth - 0.045, buttonHeight - 0.045, 0.032]} position={[0, 0, 0.02]} radius={0.045} smoothness={5}>
-            <meshPhysicalMaterial color="#061014" emissive={color} emissiveIntensity={THREE.MathUtils.lerp(0.08, 0.26, THREE.MathUtils.clamp(activation, 0, 1))} metalness={0.22} opacity={0.94} roughness={0.3} transparent />
+            <meshPhysicalMaterial color="#061014" emissive={color} emissiveIntensity={0.08} metalness={0.22} opacity={0.94} ref={buttonPanelRef} roughness={0.3} transparent />
           </RoundedBox>
           <Text
             anchorX="center"
@@ -1116,60 +1175,42 @@ function makeTileContent(threeDContent) {
   return threeDContent.tiles ?? defaultThreeDContent.tiles;
 }
 
-function RunwayTiles({ compact, curve, fibrePresence, fibreProgress, navigate, scrollProgress, threeDContent }) {
+// Renders once per content change; every scroll-driven value inside the
+// tiles and branch cables is derived per frame from the scroll store.
+function RunwayTiles({ compact, curve, navigate, threeDContent }) {
   const tileContent = useMemo(() => makeTileContent(threeDContent), [threeDContent]);
-  const focusTileScene = getFibreFocusScene(fibreProgress, "hero");
-  const activeIndex = Math.max(0, tileSceneOrder.indexOf(focusTileScene));
-  const entryPresence = THREE.MathUtils.smoothstep(scrollProgress, 0.108, 0.135);
-  const outroFade = 1 - THREE.MathUtils.smoothstep(scrollProgress, 0.875, 0.93);
-  const tileFieldPresence = entryPresence * outroFade * fibrePresence;
+  const groupRef = useRef(null);
+
+  useFrame(() => {
+    if (groupRef.current) {
+      groupRef.current.visible = getTileFieldPresence(scrollState.progress) > 0.01;
+    }
+  });
 
   return (
-    <group visible={tileFieldPresence > 0.01}>
+    <group ref={groupRef}>
       {tileSceneOrder.map((scene) => {
-        const tileState = getFibreTileState(scene, fibreProgress);
-        const activation = tileFieldPresence * tileState.activation;
-        const sceneIndex = tileSceneOrder.indexOf(scene);
-        const nearby = Math.abs(sceneIndex - activeIndex) <= 1;
-        const tileShrinkStartsAt = FIBRE_BRANCH_RELEASE * 0.74;
-        const branchVisible = tileFieldPresence > 0.08 && tileState.reached && tileState.distance <= tileShrinkStartsAt && (activation > 0.01 || nearby);
         const content = tileContent[scene] ?? defaultThreeDContent.tiles[scene];
         if (!content) return null;
         const color = sectionColors[scene] ?? COLORS.mint;
         const href = getSectionRoute(threeDContent, scene);
         const image = content.image || defaultTileImages[scene];
-        const position = getTilePosition(curve, scene, compact, fibreProgress);
-        const faceYaw = getTileFaceYaw(position, compact);
 
         return (
           <group key={scene}>
-            {branchVisible ? (
-              <BranchCable
-                activation={activation}
-                branchTravel={tileState.branchTravel}
-                color={color}
-                curve={curve}
-                fromT={tileState.progress}
-                to={connectorPointFor(position, compact, { ...content, scene })}
-                visible
-              />
-            ) : null}
+            <BranchCable color={color} compact={compact} content={content} curve={curve} scene={scene} />
             <ContentTile3D
-              activation={activation}
               body={content.body}
               color={color}
               compact={compact}
+              curve={curve}
               href={href}
               icon={content.icon}
               kicker={content.kicker}
               lines={content.lines}
               image={image}
-              faceYaw={faceYaw}
               navigate={navigate}
-              position={position}
-              presence={tileFieldPresence}
               scene={scene}
-              side={position.x >= 0 ? 1 : -1}
               title={getSceneDisplayTitle(scene, content.title)}
               typography={content.typography}
             />
@@ -1180,25 +1221,36 @@ function RunwayTiles({ compact, curve, fibrePresence, fibreProgress, navigate, s
   );
 }
 
-function ContactOutroS({ activeScene, compact, curve, navigate, scrollProgress }) {
-  const reform = getOutroLogoPresence(scrollProgress);
-  const active = activeScene === "outro" || reform > 0.55;
+function ContactOutroS({ activeScene, compact, curve, navigate }) {
   const point = useMemo(() => getFooterOutroLogoPoint(curve, compact), [compact, curve]);
+  const [outroActive, setOutroActive] = useState(false);
+  const outroActiveRef = useRef(false);
+  const activeSceneRef = useRef(activeScene);
+  activeSceneRef.current = activeScene;
 
-  if (reform <= 0.01 && activeScene !== "contact" && activeScene !== "outro") return null;
+  // "active" flips a handful of times per journey — that is the only thing
+  // allowed to reach React state here; the reform fade itself stays per-frame.
+  useFrame(() => {
+    const reform = getOutroLogoPresence(scrollState.progress);
+    const next = activeSceneRef.current === "outro" || reform > 0.55;
+    if (next !== outroActiveRef.current) {
+      outroActiveRef.current = next;
+      setOutroActive(next);
+    }
+  });
 
   return (
     <>
-      <SNetworkBackdrop compact={compact} opacity={reform} origin={point} variant="outro" />
+      <SNetworkBackdrop compact={compact} getOpacity={() => getOutroLogoPresence(scrollState.progress)} origin={point} variant="outro" />
       <SMark3D
-        active={active}
+        active={outroActive}
+        activeScale={compact ? 1.22 : 1.46}
         compact={compact}
+        getOpacity={() => getOutroLogoPresence(scrollState.progress)}
         href={internalRoutes.hero}
+        inactiveScale={compact ? 0.7 : 0.82}
         navigate={navigate}
-        opacity={reform}
         position={point}
-        scale={active ? (compact ? 1.22 : 1.46) : compact ? 0.7 : 0.82}
-        scrollProgress={scrollProgress}
       />
     </>
   );
@@ -1229,65 +1281,74 @@ function getOrbitAnchor(curve, scene, compact, angleOffset, radius) {
   return new THREE.Vector3(point.x + Math.cos(angle) * r, point.y + 0.18, point.z + Math.sin(angle) * r);
 }
 
-function SecurityWorld({ activeScene, compact, navigate, scrollProgress, threeDContent }) {
+function getModelActivation(scene, scrollProgress) {
+  return getFibreTileState(scene, getFibreSignalProgress(scrollProgress)).activation * getFibrePresence(scrollProgress);
+}
+
+function SecurityWorld({ activeScene, compact, navigate, threeDContent }) {
   const curve = useMemo(() => createFibreCurve(compact), [compact]);
   const heroSPoint = useMemo(() => getHeroLogoPoint(curve, compact), [compact, curve]);
   const outroSPoint = useMemo(() => getFooterOutroLogoPoint(curve, compact), [compact, curve]);
-  const fibrePresence = getFibrePresence(scrollProgress);
-  const fibreProgress = getFibreSignalProgress(scrollProgress);
-  const heroSPresence = getHeroLogoPresence(scrollProgress);
-  const visualScene = getVisualScene(activeScene, scrollProgress);
-  const showHeroS = heroSPresence > 0.01;
   const heroSScale = compact ? 1.5 : 1.85;
+  // visualScene is discrete: it changes at scene boundaries, not every frame,
+  // so it is the one scroll-derived value that still lives in React state.
+  const [visualScene, setVisualScene] = useState(() => getVisualScene(activeScene, scrollState.progress));
+  const visualSceneRef = useRef(visualScene);
+  const activeSceneRef = useRef(activeScene);
+  activeSceneRef.current = activeScene;
+
+  useFrame(() => {
+    const next = getVisualScene(activeSceneRef.current, scrollState.progress);
+    if (next !== visualSceneRef.current) {
+      visualSceneRef.current = next;
+      setVisualScene(next);
+    }
+  });
+
   // Real, imported GLTF models (see FeatureModel.jsx) parked on the opposite side
   // of the fibre from where each section's info tile orbits, so they read as
   // companion objects attached to the cable rather than competing with the tile.
   const laptopAnchor = useMemo(() => getOrbitAnchor(curve, "projects", compact, Math.PI * 0.55, 1.85), [compact, curve]);
   const padlockAnchor = useMemo(() => getOrbitAnchor(curve, "certifications", compact, Math.PI * 0.55, 1.7), [compact, curve]);
-  const laptopActivation = getFibreTileState("projects", fibreProgress).activation;
-  const padlockActivation = getFibreTileState("certifications", fibreProgress).activation;
 
   return (
     <>
       <color attach="background" args={["#020305"]} />
       <fog attach="fog" args={["#020305", compact ? 5 : 6.5, compact ? 25 : 36]} />
-      <CameraRig activeScene={visualScene} compact={compact} curve={curve} scrollProgress={scrollProgress} />
+      <CameraRig activeScene={visualScene} compact={compact} curve={curve} />
       <SceneLights activeScene={visualScene} curve={curve} />
-      <SNetworkBackdrop compact={compact} opacity={heroSPresence} origin={heroSPoint} variant="hero" />
-      {showHeroS ? (
-        <SMark3D
-          active={activeScene === "hero"}
-          compact={compact}
-          href={internalRoutes.hero}
-          locked
-          navigate={navigate}
-          opacity={heroSPresence}
-          position={heroSPoint}
-          scale={heroSScale}
-          scrollProgress={scrollProgress}
-        />
-      ) : null}
-      <LogoFibreEmission compact={compact} curve={curve} mode="intro" originPoint={heroSPoint} scrollProgress={scrollProgress} />
-      <FibreCable compact={compact} curve={curve} presence={fibrePresence} scrollProgress={scrollProgress} signalProgress={fibreProgress} />
-      <PacketLights curve={curve} scrollProgress={scrollProgress} />
+      <SNetworkBackdrop compact={compact} getOpacity={() => getHeroLogoPresence(scrollState.progress)} origin={heroSPoint} variant="hero" />
+      <SMark3D
+        active={activeScene === "hero"}
+        compact={compact}
+        getOpacity={() => getHeroLogoPresence(scrollState.progress)}
+        href={internalRoutes.hero}
+        locked
+        navigate={navigate}
+        position={heroSPoint}
+        scale={heroSScale}
+      />
+      <LogoFibreEmission compact={compact} curve={curve} mode="intro" originPoint={heroSPoint} />
+      <FibreCable compact={compact} curve={curve} getPresence={() => getFibrePresence(scrollState.progress)} />
+      <PacketLights curve={curve} />
       <FeatureModel
-        activation={laptopActivation * fibrePresence}
         color={COLORS.violet}
+        getActivation={() => getModelActivation("projects", scrollState.progress)}
         modelPath="/models/laptop.glb"
         position={laptopAnchor}
         scale={compact ? 1.1 : 1.9}
       />
       <FeatureModel
-        activation={padlockActivation * fibrePresence}
         color={COLORS.mint}
+        getActivation={() => getModelActivation("certifications", scrollState.progress)}
         modelPath="/models/padlock.glb"
         position={padlockAnchor}
         scale={compact ? 1.35 : 2.3}
         spinSpeed={0.32}
       />
-      <RunwayTiles compact={compact} curve={curve} fibrePresence={fibrePresence} fibreProgress={fibreProgress} navigate={navigate} scrollProgress={scrollProgress} threeDContent={threeDContent} />
-      <LogoFibreEmission compact={compact} curve={curve} mode="outro" originPoint={outroSPoint} scrollProgress={scrollProgress} />
-      <ContactOutroS activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} scrollProgress={scrollProgress} />
+      <RunwayTiles compact={compact} curve={curve} navigate={navigate} threeDContent={threeDContent} />
+      <LogoFibreEmission compact={compact} curve={curve} mode="outro" originPoint={outroSPoint} />
+      <ContactOutroS activeScene={activeScene} compact={compact} curve={curve} navigate={navigate} />
       <EffectComposer multisampling={0}>
         <Bloom intensity={compact ? 0.2 : 0.28} luminanceThreshold={0.18} mipmapBlur radius={compact ? 0.22 : 0.3} />
       </EffectComposer>
@@ -1305,7 +1366,7 @@ function StaticFallback() {
   );
 }
 
-export default function Scene3D({ activeScene, scrollProgress, threeDContent = defaultThreeDContent }) {
+export default function Scene3D({ activeScene, threeDContent = defaultThreeDContent }) {
   const { compact, reduceMotion } = useDisplayPrefs();
   const navigate = useNavigate();
 
@@ -1325,7 +1386,7 @@ export default function Scene3D({ activeScene, scrollProgress, threeDContent = d
         gl.outputColorSpace = THREE.SRGBColorSpace;
       }}
     >
-      <SecurityWorld activeScene={activeScene} compact={compact} navigate={navigate} scrollProgress={scrollProgress} threeDContent={threeDContent} />
+      <SecurityWorld activeScene={activeScene} compact={compact} navigate={navigate} threeDContent={threeDContent} />
     </Canvas>
   );
 }

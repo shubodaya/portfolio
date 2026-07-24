@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, useMotionValueEvent, useScroll } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useMotionTemplate, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { AdminPortal } from "./twod/AdminPortal.jsx";
 import { LogoIntro } from "./components/LogoIntro.jsx";
@@ -8,6 +8,7 @@ import Scene3D from "./components/Scene3D.jsx";
 import { ScrollExperience } from "./components/ScrollExperience.jsx";
 import { SmoothScroll } from "./components/SmoothScroll.jsx";
 import { getFibreFocusScene, getFibreSignalProgress } from "./components/FibreCable.jsx";
+import { scrollState } from "./components/scrollProgressStore.js";
 import { profile } from "./data/profileData.js";
 import { SiteContentProvider, useSiteContentData } from "./twod/SiteContentContext.jsx";
 import { TwoDPortfolio } from "./twod/TwoDPortfolio.jsx";
@@ -56,24 +57,36 @@ function getScrollNavScene(activeScene, scrollProgress) {
   return getFibreFocusScene(getFibreSignalProgress(scrollProgress), "hero");
 }
 
-function JourneyShutter({ scrollProgress }) {
+function getShutterPhase(scrollProgress) {
   const intro = linearProgress(scrollProgress, 0.018, 0.098);
+  if (intro > 0 && intro < 1) return { active: intro, y: -62 + intro * 124 };
+
   const outro = linearProgress(scrollProgress, 0.91, 0.97);
-  const introActive = intro > 0 && intro < 1;
-  const outroActive = outro > 0 && outro < 1;
+  if (outro > 0 && outro < 1) return { active: outro, y: 62 - outro * 124 };
 
-  if (!introActive && !outroActive) return null;
+  return null;
+}
 
-  const active = introActive ? intro : outro;
-  const direction = introActive ? 1 : -1;
-  const y = direction === 1 ? -62 + active * 124 : 62 - active * 124;
-  const opacity = Math.sin(active * Math.PI);
+// Driven entirely by motion values so the sweep animates on the compositor
+// without a single React re-render per scroll frame.
+function JourneyShutter({ progress }) {
+  const y = useTransform(progress, (value) => getShutterPhase(value)?.y ?? 0);
+  const opacity = useTransform(progress, (value) => {
+    const phase = getShutterPhase(value);
+    return phase ? Math.sin(phase.active * Math.PI) : 0;
+  });
+  const display = useTransform(opacity, (value) => (value > 0.001 ? "block" : "none"));
+  const shutterY = useMotionTemplate`${y}vh`;
 
   return (
-    <div className="journey-shutter" aria-hidden="true" style={{ "--shutter-y": `${y}vh`, opacity }}>
+    <motion.div
+      className="journey-shutter"
+      aria-hidden="true"
+      style={{ "--shutter-y": shutterY, display, opacity }}
+    >
       <span className="journey-shutter__blade" />
       <span className="journey-shutter__afterglow" />
-    </div>
+    </motion.div>
   );
 }
 
@@ -105,16 +118,32 @@ function useActiveScene() {
 function HomeExperienceContent() {
   const { threeDContent } = useSiteContentData();
   const { scrollYProgress } = useScroll();
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [navScene, setNavScene] = useState("hero");
   const [introComplete, setIntroComplete] = useState(false);
   const [hoveredScene, setHoveredScene] = useState(null);
   const [activeProject, setActiveProject] = useState("netravax");
   const activeScene = useActiveScene();
-  const navScene = getScrollNavScene(activeScene, scrollProgress);
+  const activeSceneRef = useRef(activeScene);
   const routeNodes = useMemo(() => getTileRouteNodes(threeDContent), [threeDContent]);
   const completeIntro = useCallback(() => setIntroComplete(true), []);
 
-  useMotionValueEvent(scrollYProgress, "change", setScrollProgress);
+  // Continuous progress goes to the shared store (read by the 3D scene each
+  // frame); React state only changes when the *discrete* nav scene changes.
+  useMotionValueEvent(scrollYProgress, "change", (value) => {
+    scrollState.progress = value;
+    const next = getScrollNavScene(activeSceneRef.current, value);
+    setNavScene((previous) => (previous === next ? previous : next));
+  });
+
+  useEffect(() => {
+    scrollState.progress = scrollYProgress.get();
+  }, [scrollYProgress]);
+
+  useEffect(() => {
+    activeSceneRef.current = activeScene;
+    const next = getScrollNavScene(activeScene, scrollState.progress);
+    setNavScene((previous) => (previous === next ? previous : next));
+  }, [activeScene]);
 
   return (
     <div className={`webgl-portfolio ${introComplete ? "is-live" : "is-booting"}`} data-active-scene={activeScene}>
@@ -123,12 +152,11 @@ function HomeExperienceContent() {
         activeProject={activeProject}
         activeScene={activeScene}
         hoveredScene={hoveredScene}
-        scrollProgress={scrollProgress}
         setActiveProject={setActiveProject}
         setHoveredScene={setHoveredScene}
         threeDContent={threeDContent}
       />
-      <JourneyShutter scrollProgress={scrollProgress} />
+      <JourneyShutter progress={scrollYProgress} />
 
       <Nav activeScene={navScene} onHoverScene={setHoveredScene} routeNodes={routeNodes} />
       <AnimatePresence>

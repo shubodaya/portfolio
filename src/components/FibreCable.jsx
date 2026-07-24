@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { sceneOrder } from "../data/profileData.js";
+import { scrollState } from "./scrollProgressStore.js";
 
 export const SECTION_STOPS = {
   hero: 0.035,
@@ -159,13 +160,14 @@ function createSleeveGlintCurve(curve, radius, phase, compact) {
   return new THREE.CatmullRomCurve3(points);
 }
 
-function CableDataPulse({ compact, curve, index, presence = 1, scrollProgress }) {
+function CableDataPulse({ compact, curve, getPresence, index }) {
   const packetRef = useRef(null);
   const glowRef = useRef(null);
 
   useFrame(({ clock }) => {
+    const scrollProgress = scrollState.progress;
     const reveal = THREE.MathUtils.clamp(THREE.MathUtils.smoothstep(scrollProgress, 0.104, 0.96), 0.08, 1);
-    const packetPresence = THREE.MathUtils.clamp(presence, 0, 1);
+    const packetPresence = THREE.MathUtils.clamp(getPresence(), 0, 1);
     const speed = compact ? 0.04 : 0.032;
     const t = (index * 0.19 + scrollProgress * 0.34 + clock.elapsedTime * speed) % reveal;
     const point = curve.getPointAt(t);
@@ -204,12 +206,13 @@ function CableDataPulse({ compact, curve, index, presence = 1, scrollProgress })
   );
 }
 
-function FibreSignalHead({ compact, curve, presence = 1, signalProgress }) {
+function FibreSignalHead({ compact, curve, getPresence }) {
   const coreRef = useRef(null);
   const glowRef = useRef(null);
 
   useFrame(({ clock }) => {
-    const progress = THREE.MathUtils.clamp(signalProgress, 0.001, 0.965);
+    const presence = THREE.MathUtils.clamp(getPresence(), 0, 1);
+    const progress = THREE.MathUtils.clamp(getFibreSignalProgress(scrollState.progress), 0.001, 0.965);
     const point = curve.getPointAt(progress);
     const tangent = curve.getTangentAt(progress).normalize();
     const pulse = 0.72 + Math.sin(clock.elapsedTime * 5.4 + progress * Math.PI * 6) * 0.28;
@@ -245,7 +248,8 @@ function FibreSignalHead({ compact, curve, presence = 1, signalProgress }) {
   );
 }
 
-export function FibreCable({ compact = false, curve, presence = 1, scrollProgress, signalProgress = getFibreSignalProgress(scrollProgress) }) {
+export function FibreCable({ compact = false, curve, getPresence }) {
+  const groupRef = useRef(null);
   const sleeveGlowRef = useRef(null);
   const sleeveRef = useRef(null);
   const innerGlowRef = useRef(null);
@@ -256,8 +260,13 @@ export function FibreCable({ compact = false, curve, presence = 1, scrollProgres
   const glintCurveB = useMemo(() => createSleeveGlintCurve(curve, compact ? 0.022 : 0.034, Math.PI + 0.4, compact), [compact, curve]);
 
   useFrame(({ clock }) => {
-    const spinePresence = THREE.MathUtils.clamp(presence, 0, 1);
-    const reveal = THREE.MathUtils.clamp(signalProgress, 0.001, 0.965);
+    const scrollProgress = scrollState.progress;
+    const spinePresence = THREE.MathUtils.clamp(getPresence(), 0, 1);
+    if (groupRef.current) {
+      groupRef.current.visible = spinePresence > 0.001;
+      if (!groupRef.current.visible) return;
+    }
+    const reveal = THREE.MathUtils.clamp(getFibreSignalProgress(scrollProgress), 0.001, 0.965);
     const pulse = 0.5 + Math.sin(clock.elapsedTime * 1.7 + scrollProgress * Math.PI * 5) * 0.5;
     updateDrawRange(sleeveGlowRef.current, reveal);
     updateDrawRange(sleeveRef.current, reveal);
@@ -288,7 +297,7 @@ export function FibreCable({ compact = false, curve, presence = 1, scrollProgres
   });
 
   return (
-    <group visible={presence > 0.001}>
+    <group ref={groupRef} visible={false}>
       <mesh ref={sleeveGlowRef} renderOrder={-4}>
         <tubeGeometry args={[curve, 360, compact ? 0.072 : 0.092, 26, false]} />
         <meshBasicMaterial color="#2fffe1" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
@@ -326,9 +335,9 @@ export function FibreCable({ compact = false, curve, presence = 1, scrollProgres
         <meshBasicMaterial color="#7af8ff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
       {Array.from({ length: compact ? 4 : 6 }).map((_, index) => (
-        <CableDataPulse compact={compact} curve={curve} index={index} key={`fibre-pulse-${index}`} presence={presence} scrollProgress={scrollProgress} />
+        <CableDataPulse compact={compact} curve={curve} getPresence={getPresence} index={index} key={`fibre-pulse-${index}`} />
       ))}
-      <FibreSignalHead compact={compact} curve={curve} presence={presence} signalProgress={signalProgress} />
+      <FibreSignalHead compact={compact} curve={curve} getPresence={getPresence} />
     </group>
   );
 }

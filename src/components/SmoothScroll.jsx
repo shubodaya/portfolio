@@ -16,11 +16,13 @@ export function SmoothScroll() {
       return undefined;
     }
 
+    // Shorter glide + full wheel ratio: the scene work is cheap enough now
+    // that responsiveness reads better than a long, floaty settle.
     const lenis = new Lenis({
-      duration: 1.18,
+      duration: 1.05,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      wheelMultiplier: 0.82,
+      wheelMultiplier: 1,
       touchMultiplier: 1.1
     });
     window.__portfolioLenis = lenis;
