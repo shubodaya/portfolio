@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from "framer-motion";
 import { Hero } from "./Hero.jsx";
 import { JourneyNetworkBackdrop } from "./JourneyNetworkBackdrop.jsx";
 import { profile, routeNodes } from "../data/profileData.js";
@@ -25,7 +26,24 @@ export function SceneSection({ align = "left", children, id, kicker, title }) {
   );
 }
 
+// Rise-in reveal for the visible outro blocks (the per-section copy is
+// screen-reader-only; the journey's visible content is the 3D tiles).
+// Both outro blocks center themselves with translateX(-50%), so x: "-50%"
+// must ride along in every animation state or framer would clobber it.
+function useOutroReveal(delay = 0) {
+  const reduceMotion = useReducedMotion();
+
+  return {
+    initial: reduceMotion ? false : { opacity: 0, x: "-50%", y: 38 },
+    transition: { delay, duration: 0.72, ease: [0.16, 1, 0.3, 1] },
+    viewport: { amount: 0.3, once: true },
+    whileInView: { opacity: 1, x: "-50%", y: 0 }
+  };
+}
+
 export function ScrollExperience({ hero, profile: profileContent = profile, routeNodes: nodes = routeNodes }) {
+  const messageReveal = useOutroReveal(0);
+  const contactReveal = useOutroReveal(0.14);
   const footerPrimaryLinks = [
     { href: "/", label: "Home" },
     ...nodes.map((node) => ({
@@ -56,11 +74,11 @@ export function ScrollExperience({ hero, profile: profileContent = profile, rout
       ))}
       <section className="story-section story-section--outro" data-scene-section id="outro" aria-label="S outro">
         <JourneyNetworkBackdrop className="outro-journey-network" density={1} opacity={0.46} />
-        <div className="outro-message">
+        <motion.div className="outro-message" {...messageReveal}>
           <p>Network security, infrastructure support, and technical troubleshooting.</p>
           <strong>{profileContent.email}</strong>
-        </div>
-        <nav className="outro-contact-panel" aria-label="Contact links">
+        </motion.div>
+        <motion.nav className="outro-contact-panel" aria-label="Contact links" {...contactReveal}>
           {outroLinks.map(({ href, kind, label }) => (
             <a
               aria-label={label}
@@ -73,7 +91,7 @@ export function ScrollExperience({ hero, profile: profileContent = profile, rout
               <ContactGlyph kind={kind} />
             </a>
           ))}
-        </nav>
+        </motion.nav>
         <footer className="site-footer" aria-label="Website footer">
           <span className="site-footer__rule" aria-hidden="true" />
           <div className="site-footer__statement">

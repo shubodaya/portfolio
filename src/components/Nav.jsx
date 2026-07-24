@@ -1,8 +1,22 @@
+import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { routeNodes } from "../data/profileData.js";
 import { FIBRE_TILE_POINTS } from "./FibreCable.jsx";
+
+// Shared-layout pill: when the active scene changes, the highlight glides
+// from the previous nav item to the next instead of snapping.
+function NavActivePill() {
+  return (
+    <motion.span
+      aria-hidden="true"
+      className="nav-active-pill"
+      layoutId="nav-active-pill"
+      transition={{ type: "spring", stiffness: 480, damping: 40 }}
+    />
+  );
+}
 
 const tileScrollTargets = Object.fromEntries(FIBRE_TILE_POINTS.map(({ progress, scene }) => [scene, progress]));
 
@@ -73,6 +87,7 @@ export function Nav({ activeScene, onHoverScene, routeNodes: nodes = routeNodes 
           onMouseEnter={() => onHoverScene?.("hero")}
           onMouseLeave={() => onHoverScene?.(null)}
         >
+          {activeScene === "hero" ? <NavActivePill /> : null}
           <span>HME</span>
           <b>Home</b>
         </a>
@@ -92,6 +107,7 @@ export function Nav({ activeScene, onHoverScene, routeNodes: nodes = routeNodes 
               key={node.id}
               onClick={(event) => handleSceneClick(event, node.id)}
             >
+              {activeScene === node.id ? <NavActivePill /> : null}
               <span>{node.short}</span>
               <b>{node.label}</b>
             </a>

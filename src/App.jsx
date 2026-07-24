@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useMotionTemplate, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useMotionTemplate, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { AdminPortal } from "./twod/AdminPortal.jsx";
 import { LogoIntro } from "./components/LogoIntro.jsx";
@@ -65,6 +65,21 @@ function getShutterPhase(scrollProgress) {
   if (outro > 0 && outro < 1) return { active: outro, y: 62 - outro * 124 };
 
   return null;
+}
+
+// Thin signal line under the top edge showing how far along the fibre
+// journey the visitor is. Pure motion values — zero re-renders.
+function JourneyProgressRail({ progress }) {
+  const reduceMotion = useReducedMotion();
+  const smoothed = useSpring(progress, { stiffness: 150, damping: 28, mass: 0.4 });
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="journey-progress"
+      style={{ scaleX: reduceMotion ? progress : smoothed }}
+    />
+  );
 }
 
 // Driven entirely by motion values so the sweep animates on the compositor
@@ -158,6 +173,7 @@ function HomeExperienceContent() {
       />
       <JourneyShutter progress={scrollYProgress} />
 
+      <JourneyProgressRail progress={scrollYProgress} />
       <Nav activeScene={navScene} onHoverScene={setHoveredScene} routeNodes={routeNodes} />
       <AnimatePresence>
         {!introComplete ? <LogoIntro onComplete={completeIntro} /> : null}
